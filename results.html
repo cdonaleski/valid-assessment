@@ -1,0 +1,211 @@
+<!--
+    VALID Assessment Tool - Results Page
+    Purpose: Displays assessment results and insights for users who have completed the VALID assessment.
+    This page presents personalized feedback, decision-making style analysis, and growth recommendations.
+    Target Users: Assessment participants reviewing their results and development opportunities.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment Results</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <img src="img/TVM_ Logo_L.png" alt="The Validated Mind Research Lab Logo" class="header-logo">
+        </div>
+    </header>
+
+    <div class="app-container">
+        <div class="content-card">
+            <h1>Your VALID Assessment Results</h1>
+            <p class="lead">Thank you for completing the assessment. Here's a breakdown of your decision-making style:</p>
+
+            <!-- Results Chart -->
+            <div class="chart-container">
+                <canvas id="resultsChart"></canvas>
+            </div>
+
+            <!-- Dominant Style -->
+            <div class="dominant-style">
+                <h2>Your Dominant Style</h2>
+                <p id="dominantStyle"></p>
+            </div>
+
+            <!-- Dimension Explanations -->
+            <div class="dimensions">
+                <div class="dimension">
+                    <h3>Veracity (V)</h3>
+                    <p>Your tendency to rely on data, facts, and empirical evidence in decision-making.</p>
+                </div>
+                <div class="dimension">
+                    <h3>Association (A)</h3>
+                    <p>Your inclination to consider relationships and collaborative input in choices.</p>
+                </div>
+                <div class="dimension">
+                    <h3>Lived Experience (L)</h3>
+                    <p>Your use of personal experience and practical knowledge in judgment.</p>
+                </div>
+                <div class="dimension">
+                    <h3>Institutional Knowledge (I)</h3>
+                    <p>Your reliance on established practices and formal learning.</p>
+                </div>
+                <div class="dimension">
+                    <h3>Desire-Based (D)</h3>
+                    <p>Your use of intuition and future-focused aspirational thinking.</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+                <button class="btn btn-primary" onclick="window.print()">Print Results</button>
+                <button class="btn btn-secondary" onclick="window.location.href='index.html'">Start New Assessment</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+        import { config } from './js/config.js';
+        
+        // Initialize Supabase
+        const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+
+        // Get assessment ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const assessmentId = urlParams.get('id');
+
+        if (!assessmentId) {
+            alert('No assessment ID provided. Please start a new assessment.');
+            window.location.href = 'index.html';
+        }
+
+        async function loadResults() {
+            try {
+                // Fetch assessment results
+                const { data: assessment, error } = await supabase
+                    .from('assessments')
+                    .select('*')
+                    .eq('id', assessmentId)
+                    .single();
+
+                if (error) throw error;
+                if (!assessment) throw new Error('Assessment not found');
+
+                // Display results
+                displayResults(assessment);
+            } catch (error) {
+                console.error('Failed to load results:', error);
+                alert('Failed to load your results. Please try again later.');
+            }
+        }
+
+        function displayResults(assessment) {
+            // Create chart
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Veracity', 'Association', 'Lived Experience', 'Institutional', 'Desire'],
+                    datasets: [{
+                        label: 'Your Decision-Making Style',
+                        data: [
+                            assessment.scores.V || 0,
+                            assessment.scores.A || 0,
+                            assessment.scores.L || 0,
+                            assessment.scores.I || 0,
+                            assessment.scores.D || 0
+                        ],
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                },
+                options: {
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 7,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Display dominant style
+            const dominantStyleEl = document.getElementById('dominantStyle');
+            dominantStyleEl.textContent = assessment.persona || 'Results being processed';
+        }
+
+        // Load results when page loads
+        document.addEventListener('DOMContentLoaded', loadResults);
+    </script>
+
+    <style>
+        .chart-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 2rem auto;
+        }
+
+        .dimensions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .dimension {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .dimension h3 {
+            color: #2b475c;
+            margin-bottom: 0.5rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        @media print {
+            .actions {
+                display: none;
+            }
+        }
+    </style>
+</body>
+</html> 
