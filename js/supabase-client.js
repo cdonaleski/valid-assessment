@@ -1,139 +1,67 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { logger } from './logger.js';
-import config from './config.js';
 
-let supabaseClient = null;
-let isInitialized = false;
-let initializationPromise = null;
+let supabaseInstance = null;
 let initializationAttempts = 0;
-const MAX_INITIALIZATION_ATTEMPTS = 3;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
-async function testConnection(client) {
+async function initialize(retryCount = 0) {
     try {
-        const { data, error } = await client.from('questions')
-            .select('count')
-            .limit(1)
-            .maybeSingle();
-
-        if (error) {
-            throw error;
+        if (!window.__env__) {
+            throw new Error('Environment variables not loaded');
         }
 
-        return true;
-    } catch (error) {
-        logger.error('Connection test failed:', {
-            error: error.message,
-            stack: error.stack
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__env__;
+        
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            throw new Error('Missing Supabase configuration');
+        }
+
+        logger.info('Initializing Supabase client', {
+            hasUrl: !!SUPABASE_URL,
+            hasKey: !!SUPABASE_ANON_KEY,
+            attempt: retryCount + 1
         });
-        throw error;
-    }
-}
 
-export async function initializeSupabase() {
-    // Return existing initialization promise if already in progress
-    if (initializationPromise) {
-        return initializationPromise;
-    }
-
-    // Create new initialization promise
-    initializationPromise = (async () => {
-        try {
-            logger.debug('Starting Supabase initialization');
-
-            // Check if already initialized
-            if (isInitialized && supabaseClient) {
-                logger.debug('Supabase already initialized');
-                return supabaseClient;
+        supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true
             }
+        });
 
-            // Check environment variables
-            if (!window.__env__) {
-                throw new Error('Environment variables not loaded');
-            }
+        // Test the connection
+        const { data, error } = await supabaseInstance.from('test').select('count').limit(1);
+        if (error) throw error;
 
-            // Get and validate Supabase configuration
-            const { url, anonKey } = config.supabase;
-            if (!url || !anonKey) {
-                throw new Error(`Invalid Supabase configuration: url=${!!url}, anonKey=${!!anonKey}`);
-            }
+        logger.info('Supabase client initialized successfully');
+        return supabaseInstance;
+    } catch (error) {
+        logger.error('Failed to initialize Supabase client', {
+            error: error.message,
+            attempt: retryCount + 1
+        });
 
-            // Initialize with retries
-            while (initializationAttempts < MAX_INITIALIZATION_ATTEMPTS) {
-                try {
-                    logger.debug(`Creating Supabase client (attempt ${initializationAttempts + 1}/${MAX_INITIALIZATION_ATTEMPTS})`);
-                    
-                    // Create client
-                    supabaseClient = createClient(url, anonKey, {
-                        auth: {
-                            autoRefreshToken: true,
-                            persistSession: true
-                        }
-                    });
-                    
-                    // Test connection
-                    await testConnection(supabaseClient);
-                    
-                    // Success
-                    isInitialized = true;
-                    logger.info('Supabase client initialized successfully');
-                    return supabaseClient;
-                } catch (error) {
-                    initializationAttempts++;
-                    logger.warn(`Initialization attempt ${initializationAttempts} failed:`, {
-                        error: error.message,
-                        stack: error.stack,
-                        remainingAttempts: MAX_INITIALIZATION_ATTEMPTS - initializationAttempts
-                    });
-
-                    if (initializationAttempts < MAX_INITIALIZATION_ATTEMPTS) {
-                        const delay = Math.min(1000 * Math.pow(2, initializationAttempts), 5000);
-                        logger.debug(`Waiting ${delay}ms before retry`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        throw error;
-                    }
-                }
-            }
-
-            throw new Error(`Failed to initialize Supabase client after ${MAX_INITIALIZATION_ATTEMPTS} attempts`);
-        } catch (error) {
-            logger.error('Supabase initialization failed:', {
-                error: error.message,
-                stack: error.stack,
-                attempts: initializationAttempts,
-                config: {
-                    hasUrl: !!config.supabase?.url,
-                    hasKey: !!config.supabase?.anonKey,
-                    env: config.env,
-                    isInitialized
-                }
-            });
-            
-            // Clear initialization state on error
-            supabaseClient = null;
-            isInitialized = false;
-            initializationPromise = null;
-            
-            throw error;
+        if (retryCount < MAX_RETRIES) {
+            logger.info(`Retrying Supabase initialization in ${RETRY_DELAY}ms...`);
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            return initialize(retryCount + 1);
         }
-    })();
 
-    return initializationPromise;
-}
-
-export function getSupabaseClient() {
-    if (!isInitialized || !supabaseClient) {
-        throw new Error('Supabase client not initialized');
+        throw new Error(`Failed to initialize Supabase after ${MAX_RETRIES} attempts: ${error.message}`);
     }
-    return supabaseClient;
-}
-
-export function isSupabaseInitialized() {
-    return isInitialized && !!supabaseClient;
 }
 
 export default {
-    initialize: initializeSupabase,
-    getClient: getSupabaseClient,
-    isInitialized: isSupabaseInitialized
+    initialize,
+    getInstance() {
+        if (!supabaseInstance) {
+            throw new Error('Supabase client not initialized. Call initialize() first.');
+        }
+        return supabaseInstance;
+    },
+    isInitialized() {
+        return !!supabaseInstance;
+    }
 }; 

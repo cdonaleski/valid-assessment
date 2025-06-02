@@ -21,10 +21,6 @@
 
     <!-- Environment Variables -->
     <script src="js/env.js"></script>
-    <script type="module" src="js/test-supabase.js"></script>
-    <script type="module" src="js/connection-test.js"></script>
-
-    <!-- Module initialization -->
     <script type="module">
         // Wait for environment variables to be fully loaded
         async function waitForEnv() {
@@ -46,21 +42,16 @@
             // Wait for environment variables
             await waitForEnv();
 
-            // Import and initialize configuration first
-            const config = (await import('./js/config.js')).default;
+            // Import and initialize modules
             const { logger } = await import('./js/logger.js');
-            const supabaseClient = (await import('./js/bundle.js')).default;
+            const supabaseClient = (await import('./js/supabase-client.js')).default;
             const stateManager = (await import('./js/state-manager.js')).default;
             const assessmentManager = (await import('./js/assessment-manager.js')).default;
             const { calculateScores } = await import('./js/scoring.js');
             const validAssessmentData = (await import('./js/questions-data.js')).default;
             
-            // Log configuration status
-            console.log('Configuration loaded:', {
-                hasConfig: !!config,
-                env: config.env,
-                hasSupabaseConfig: !!(config.supabase?.url && config.supabase?.anonKey)
-            });
+            // Log initialization status
+            logger.info('Modules loaded, initializing Supabase...');
 
             // Initialize Supabase client
             try {
@@ -68,7 +59,25 @@
                 logger.info('Supabase initialization successful');
             } catch (error) {
                 logger.error('Failed to initialize Supabase:', error);
-                // Continue loading the app, database.js will handle offline mode
+                // Show error to user
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.style.display = 'block';
+                errorDiv.style.padding = '1rem';
+                errorDiv.style.margin = '1rem';
+                errorDiv.style.backgroundColor = '#fee';
+                errorDiv.style.border = '1px solid #f88';
+                errorDiv.style.borderRadius = '4px';
+                errorDiv.innerHTML = `
+                    <h3 style="color: #c00; margin: 0 0 0.5rem 0">Connection Error</h3>
+                    <p style="margin: 0">Unable to connect to the database. Please try:</p>
+                    <ul style="margin: 0.5rem 0">
+                        <li>Refreshing the page</li>
+                        <li>Checking your internet connection</li>
+                        <li>Trying again in a few minutes</li>
+                    </ul>
+                `;
+                document.querySelector('.app-container').prepend(errorDiv);
             }
 
             // Verify module loading
