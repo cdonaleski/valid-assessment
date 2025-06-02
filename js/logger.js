@@ -3,117 +3,95 @@
  * Provides controlled logging functionality for both development and production environments
  */
 
+// Enhanced logger for better error tracking
+const LOG_LEVELS = {
+    DEBUG: 0,
+    INFO: 1,
+    WARN: 2,
+    ERROR: 3
+};
+
+const LOG_COLORS = {
+    DEBUG: '#808080', // gray
+    INFO: '#0066cc',  // blue
+    WARN: '#ff9900',  // orange
+    ERROR: '#cc0000'  // red
+};
+
 class Logger {
-    constructor(options = {}) {
-        this.options = {
-            isProduction: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1',
-            logLevel: window.location.hostname === 'localhost' ? 'debug' : 'error',
-            enableConsole: true,
-            enableRemote: false,
-            remoteEndpoint: null,
-            ...options
-        };
-
-        this.logLevels = {
-            debug: 0,
-            info: 1,
-            warn: 2,
-            error: 3
-        };
-
-        // Initialize log buffer
-        this.logBuffer = [];
-        this.maxBufferSize = 1000;
+    constructor() {
+        this.level = window.__env__?.VALID_ENV === 'production' ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
+        this.history = [];
+        this.maxHistory = 100;
     }
 
     formatMessage(level, message, data) {
         const timestamp = new Date().toISOString();
-        return {
+        const logEntry = {
             timestamp,
             level,
-            message: String(message),
-            data: data ? this.sanitizeData(data) : undefined
+            message,
+            data
         };
+
+        // Keep history for debugging
+        this.history.unshift(logEntry);
+        if (this.history.length > this.maxHistory) {
+            this.history.pop();
+        }
+
+        // Format console output
+        const style = `color: ${LOG_COLORS[level]}; font-weight: bold;`;
+        return [`%c[${level}] ${message}`, style, data];
     }
 
-    sanitizeData(data) {
-        try {
-            if (data instanceof Error) {
-                return {
-                    message: data.message,
-                    stack: data.stack,
-                    name: data.name
-                };
+    debug(message, data = {}) {
+        if (this.level <= LOG_LEVELS.DEBUG) {
+            console.debug(...this.formatMessage('DEBUG', message, data));
+        }
+    }
+
+    info(message, data = {}) {
+        if (this.level <= LOG_LEVELS.INFO) {
+            console.info(...this.formatMessage('INFO', message, data));
+        }
+    }
+
+    warn(message, data = {}) {
+        if (this.level <= LOG_LEVELS.WARN) {
+            console.warn(...this.formatMessage('WARN', message, data));
+        }
+    }
+
+    error(message, data = {}) {
+        if (this.level <= LOG_LEVELS.ERROR) {
+            // For errors, also log stack trace if available
+            if (data.error instanceof Error) {
+                data.stack = data.error.stack;
             }
-            return JSON.parse(JSON.stringify(data));
-        } catch (error) {
-            return String(data);
+            console.error(...this.formatMessage('ERROR', message, data));
         }
     }
 
-    shouldLog(level) {
-        const configuredLevel = this.logLevels[this.options.logLevel];
-        const messageLevel = this.logLevels[level];
-        return messageLevel >= configuredLevel;
+    // Get recent logs for debugging
+    getLogs() {
+        return this.history;
     }
 
-    addToBuffer(logEntry) {
-        this.logBuffer.push(logEntry);
-        if (this.logBuffer.length > this.maxBufferSize) {
-            this.logBuffer.shift();
+    // Clear log history
+    clearLogs() {
+        this.history = [];
+    }
+
+    // Change log level
+    setLevel(level) {
+        if (LOG_LEVELS[level] !== undefined) {
+            this.level = LOG_LEVELS[level];
         }
-    }
-
-    log(level, message, data) {
-        try {
-            if (!this.shouldLog(level)) return;
-
-            const logEntry = this.formatMessage(level, message, data);
-            this.addToBuffer(logEntry);
-
-            if (this.options.enableConsole) {
-                const consoleMethod = console[level] || console.log;
-                if (data) {
-                    consoleMethod(`[${level.toUpperCase()}] ${message}`, data);
-                } else {
-                    consoleMethod(`[${level.toUpperCase()}] ${message}`);
-                }
-            }
-
-            return logEntry;
-        } catch (error) {
-            console.error('Logging failed:', error);
-            return null;
-        }
-    }
-
-    debug(message, data) {
-        return this.log('debug', message, data);
-    }
-
-    info(message, data) {
-        return this.log('info', message, data);
-    }
-
-    warn(message, data) {
-        return this.log('warn', message, data);
-    }
-
-    error(message, data) {
-        return this.log('error', message, data);
-    }
-
-    getBuffer() {
-        return [...this.logBuffer];
-    }
-
-    clearBuffer() {
-        this.logBuffer = [];
     }
 }
 
-// Create and export logger instance
-const logger = new Logger();
+export const logger = new Logger();
 
 // Add error event listeners
 window.addEventListener('error', (event) => {
@@ -131,6 +109,4 @@ window.addEventListener('unhandledrejection', (event) => {
         reason: event.reason,
         stack: event.reason?.stack
     });
-});
-
-export { Logger, logger }; 
+}); 
