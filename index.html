@@ -1,0 +1,1819 @@
+<!--
+    VALID Assessment Tool - Main Assessment Interface
+    Purpose: Entry point for the assessment tool where users begin their VALID assessment.
+    This interface presents questions and captures responses for evaluating decision-making styles.
+    Target Users: Executives and managers seeking professional growth and self-awareness.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment: Understand Your Decision-Making Style</title>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Environment Variables -->
+    <script src="js/env.js"></script>
+    <script type="module" src="js/test-supabase.js"></script>
+    <script type="module" src="js/connection-test.js"></script>
+
+    <!-- Module initialization -->
+    <script type="module">
+        // Wait for environment variables to be fully loaded
+        async function waitForEnv() {
+            const maxAttempts = 20;
+            const interval = 100; // 100ms
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
+                if (window.__env__ && !window.__env_error__) {
+                    return true;
+                }
+                await new Promise(resolve => setTimeout(resolve, interval));
+                attempts++;
+            }
+            throw new Error('Environment variables not loaded after ' + maxAttempts + ' attempts');
+        }
+
+        try {
+            // Wait for environment variables
+            await waitForEnv();
+
+            // Import and initialize configuration first
+            const config = (await import('./js/config.js')).default;
+            const { logger } = await import('./js/logger.js');
+            const supabaseClient = (await import('./js/bundle.js')).default;
+            const stateManager = (await import('./js/state-manager.js')).default;
+            const assessmentManager = (await import('./js/assessment-manager.js')).default;
+            const { calculateScores } = await import('./js/scoring.js');
+            const validAssessmentData = (await import('./js/questions-data.js')).default;
+            
+            // Log configuration status
+            console.log('Configuration loaded:', {
+                hasConfig: !!config,
+                env: config.env,
+                hasSupabaseConfig: !!(config.supabase?.url && config.supabase?.anonKey)
+            });
+
+            // Initialize Supabase client
+            try {
+                await supabaseClient.initialize();
+                logger.info('Supabase initialization successful');
+            } catch (error) {
+                logger.error('Failed to initialize Supabase:', error);
+                // Continue loading the app, database.js will handle offline mode
+            }
+
+            // Verify module loading
+            console.log('Module loading verification:', {
+                logger: !!logger,
+                stateManager: !!stateManager,
+                assessmentManager: !!assessmentManager,
+                calculateScores: !!calculateScores,
+                validAssessmentData: {
+                    loaded: !!validAssessmentData,
+                    questionCount: validAssessmentData?.questions?.length,
+                    attentionChecks: validAssessmentData?.questions?.filter(q => q.dimension === 'attention_check')?.length
+                }
+            });
+
+            // Make logger available globally for error handling
+            window.appLogger = logger;
+
+            // Global initialization state
+            window.VALID_INIT_STATE = {
+                started: false,
+                completed: false,
+                error: null
+            };
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeEventHandlers);
+            } else {
+                initializeEventHandlers();
+            }
+        } catch (error) {
+            console.error('Failed to initialize application:', error);
+            // Show error to user
+            document.body.innerHTML = `
+                <div style="padding: 20px; color: red;">
+                    <h2>Initialization Error</h2>
+                    <p>Failed to initialize the application. Please try refreshing the page.</p>
+                    <pre>${error.message}</pre>
+                </div>
+            `;
+        }
+    </script>
+
+    <style>
+        .error-message {
+            color: red;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 400px;
+            max-height: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: block !important;
+            border-top-left-radius: 8px;
+        }
+
+        .debug-panel .log {
+            margin: 4px 0;
+            padding: 4px 8px;
+            border-left: 3px solid #666;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .debug-panel .log.debug { 
+            border-color: #7f8c8d; 
+            color: #bdc3c7;
+        }
+        .debug-panel .log.info { 
+            border-color: #2980b9; 
+            color: #3498db;
+        }
+        .debug-panel .log.warn { 
+            border-color: #f39c12; 
+            color: #f1c40f;
+        }
+        .debug-panel .log.error { 
+            border-color: #c0392b; 
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .debug-panel .timestamp {
+            color: #666;
+            font-size: 10px;
+            margin-right: 5px;
+        }
+
+        .debug-panel .clear-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #666;
+            border: none;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .debug-panel .clear-button:hover {
+            background: #777;
+        }
+
+        .scale-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #2b475c;
+            background: white;
+            color: #2b475c;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scale-button:hover {
+            background: #e4edf3;
+        }
+
+        .scale-button.selected {
+            background: #2b475c;
+            color: white;
+        }
+
+        .scale-container {
+            margin: 2rem 0;
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            color: #5f6567;
+            font-size: 0.875rem;
+        }
+
+        .scale-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .progress-container {
+            margin-bottom: 2rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e4edf3;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #2b475c, #669bbc);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: block;
+            text-align: center;
+            margin-top: 0.5rem;
+            color: #5f6567;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .scale-buttons {
+                gap: 0.5rem;
+            }
+
+            .scale-button {
+                width: 35px;
+                height: 35px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .scale-button {
+                width: 30px;
+                height: 30px;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Debug styles for sections */
+        .assessment-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .assessment-section.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Debug outlines */
+        .assessment-section {
+            border: 1px solid transparent;
+        }
+
+        .assessment-section.active {
+            border-color: rgba(41, 128, 185, 0.3);
+        }
+
+        /* Debug info */
+        .section-debug {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9998;
+        }
+
+        .results-container {
+            margin-top: 2rem;
+        }
+
+        .dimension-scores {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .dimension-score {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .dimension-score h3 {
+            margin: 0 0 1rem 0;
+            color: #2b475c;
+        }
+
+        .score-bar {
+            height: 12px;
+            background: #e4edf3;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .score-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(to right, #2b475c, #669bbc);
+            transition: width 0.5s ease;
+        }
+
+        .score-value {
+            text-align: right;
+            margin: 0.25rem 0 0 0;
+            font-weight: 600;
+            color: #2b475c;
+        }
+
+        @media (min-width: 768px) {
+            .dimension-scores {
+                gap: 1.5rem;
+            }
+        }
+
+        .settings-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+
+        .auto-advance-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .auto-advance-toggle input[type="checkbox"] {
+            width: 2.5rem;
+            height: 1.25rem;
+            position: relative;
+            appearance: none;
+            background: #e4edf3;
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .auto-advance-toggle input[type="checkbox"]::before {
+            content: '';
+            width: 1.25rem;
+            height: 1.25rem;
+            position: absolute;
+            left: 0;
+            background: #fff;
+            border-radius: 50%;
+            transform: scale(0.9);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .auto-advance-toggle input[type="checkbox"]:checked {
+            background: #2b475c;
+        }
+
+        .auto-advance-toggle input[type="checkbox"]:checked::before {
+            left: 1.25rem;
+        }
+
+        .toggle-label {
+            font-size: 0.875rem;
+            color: #5f6567;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        .right-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .summary-container {
+            max-height: 600px;
+            overflow-y: auto;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .summary-item {
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .summary-item.unanswered {
+            border-left: 4px solid #dc3545;
+        }
+
+        .summary-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-item-number {
+            font-weight: 600;
+            color: #2b475c;
+        }
+
+        .summary-item-answer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .summary-item-text {
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-scale {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .summary-scale-button {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #2b475c;
+            background: white;
+            color: #2b475c;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .summary-scale-button.selected {
+            background: #2b475c;
+            color: white;
+        }
+
+        .edit-button {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            color: #2b475c;
+            background: none;
+            border: 1px solid #2b475c;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .edit-button:hover {
+            background: #e4edf3;
+        }
+
+        .results-actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .results-actions button {
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .btn-outline {
+            background: none;
+            border: 2px solid #2b475c;
+            color: #2b475c;
+        }
+
+        .btn-outline:hover {
+            background: #e4edf3;
+        }
+
+        @media (max-width: 768px) {
+            .results-actions {
+                flex-direction: column;
+            }
+
+            .results-actions button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug Panel -->
+    <div id="debugPanel" class="debug-panel">
+        <button class="clear-button" onclick="clearDebugPanel()">Clear</button>
+        <div id="debugLogs"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <img src="img/TVM_ Logo_L.png" alt="The Validated Mind Research Lab Logo" class="header-logo">
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- Welcome Section -->
+        <section id="welcomeSection" class="assessment-section active">
+            <div class="content-card">
+                <h2>VALID Assessment</h2>
+                <p class="lead">Discover how you make decisions and learn to expand your toolkit.</p>
+                
+                <div class="form-actions center">
+                    <button type="button" id="startButton" class="btn btn-primary">
+                        Start Assessment
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Demographics Section -->
+        <section id="demographicsSection" class="assessment-section">
+            <div class="content-card">
+                <h2>DEMOGRAPHICS</h2>
+                <p class="lead">In order for us to understand and make relevant improvements to the experiences of staff, we need to gather a small amount of background information about you. Please note, however, that no personally identifying information is requested or retained. No individual responses are able to be identified.</p>
+
+                <form id="demographicsForm" class="form-grid">
+                    <div class="form-group">
+                        <label for="department">1. What is your current department in the organisation?</label>
+                        <select id="department" name="department" required>
+                            <option value="">Please select...</option>
+                            <option value="Executive">Executive</option>
+                            <option value="Finance">Finance</option>
+                            <option value="HR">Human Resources</option>
+                            <option value="IT">Information Technology</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div class="error-message" id="departmentError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">2. What is your role level?</label>
+                        <select id="role" name="role" required>
+                            <option value="">Please select...</option>
+                            <option value="Individual Contributor">Individual Contributor</option>
+                            <option value="Team Lead">Team Lead</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Director">Director</option>
+                            <option value="VP/C-Suite">VP/C-Suite</option>
+                            <option value="Owner/Founder">Owner/Founder</option>
+                        </select>
+                        <div class="error-message" id="roleError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="experience">3. How many years of experience do you have in your current role?</label>
+                        <select id="experience" name="experience" required>
+                            <option value="">Please select...</option>
+                            <option value="0-2">0-2 years</option>
+                            <option value="3-5">3-5 years</option>
+                            <option value="6-10">6-10 years</option>
+                            <option value="11-15">11-15 years</option>
+                            <option value="15+">15+ years</option>
+                        </select>
+                        <div class="error-message" id="experienceError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">4. Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="your@email.com">
+                        <small>Required for sending your results</small>
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="backButton">« Back</button>
+                        <button type="submit" class="btn btn-primary">Continue »</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Instructions Section -->
+        <section id="instructionsSection" class="assessment-section">
+            <div class="content-card">
+                <h2>Instructions</h2>
+                <p class="lead">Please read these instructions carefully before beginning the assessment.</p>
+
+                <div class="instructions-list">
+                    <div class="instruction-item">
+                        <h3>1. Answer Honestly</h3>
+                        <p>There are no right or wrong answers. Choose responses that best reflect your natural decision-making style.</p>
+                    </div>
+
+                    <div class="instruction-item">
+                        <h3>2. Response Scale</h3>
+                        <p>For each statement, indicate how characteristic it is of you:</p>
+                        <p><strong>1 = Not at all characteristic</strong> to <strong>7 = Very characteristic</strong></p>
+                    </div>
+
+                    <div class="instruction-item">
+                        <h3>3. Time Required</h3>
+                        <p>The assessment takes approximately 15-20 minutes to complete.</p>
+                    </div>
+
+                    <div class="instruction-item">
+                        <h3>4. Confidentiality</h3>
+                        <p>Your responses are confidential and will be used only for research and development purposes.</p>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="backToDemographicsButton">« Back</button>
+                    <button type="button" class="btn btn-primary" id="beginAssessmentButton">Begin Assessment »</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Assessment Section -->
+        <section id="assessmentSection" class="assessment-section">
+            <div class="content-card">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">Question 1 of 50</span>
+                </div>
+
+                <div class="question-container">
+                    <h2 id="questionText" class="question-text"></h2>
+                    
+                    <div class="scale-container">
+                        <div class="scale-labels">
+                            <span>Not at all characteristic</span>
+                            <span>Very characteristic</span>
+                        </div>
+                        <div class="scale-buttons" id="scaleButtons">
+                            <button class="scale-button" data-value="1">1</button>
+                            <button class="scale-button" data-value="2">2</button>
+                            <button class="scale-button" data-value="3">3</button>
+                            <button class="scale-button" data-value="4">4</button>
+                            <button class="scale-button" data-value="5">5</button>
+                            <button class="scale-button" data-value="6">6</button>
+                            <button class="scale-button" data-value="7">7</button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="prevButton" class="btn btn-secondary">« Previous</button>
+                        <div class="right-actions">
+                            <label class="auto-advance-toggle">
+                                <input type="checkbox" id="autoAdvanceToggle">
+                                <span class="toggle-label">Auto-advance</span>
+                            </label>
+                            <button id="nextButton" class="btn btn-primary" disabled>Next »</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Section -->
+        <section id="summarySection" class="assessment-section">
+            <div class="content-card">
+                <h2>Review Your Answers</h2>
+                <p class="lead">Please review your answers before submitting. You can go back to any question to change your response.</p>
+                
+                <div class="summary-container">
+                    <div id="summaryList" class="summary-list">
+                        <!-- Questions will be populated here -->
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button id="returnToQuestionButton" class="btn btn-secondary">« Return to Questions</button>
+                    <button id="submitAssessmentButton" class="btn btn-primary">Submit Assessment »</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="assessment-section">
+            <div class="content-card">
+                <h2>Your VALID Assessment Results</h2>
+                <p class="lead">Thank you for completing the assessment. Here are your results:</p>
+                
+                <div class="results-container">
+                    <div class="dimension-scores">
+                        <div class="dimension-score">
+                            <h3>Verity</h3>
+                            <div class="score-bar">
+                                <div class="score-fill" id="verityScore"></div>
+                            </div>
+                            <p class="score-value" id="verityValue"></p>
+                        </div>
+                        <div class="dimension-score">
+                            <h3>Association</h3>
+                            <div class="score-bar">
+                                <div class="score-fill" id="associationScore"></div>
+                            </div>
+                            <p class="score-value" id="associationValue"></p>
+                        </div>
+                        <div class="dimension-score">
+                            <h3>Lived Experience</h3>
+                            <div class="score-bar">
+                                <div class="score-fill" id="livedScore"></div>
+                            </div>
+                            <p class="score-value" id="livedValue"></p>
+                        </div>
+                        <div class="dimension-score">
+                            <h3>Institutional Knowledge</h3>
+                            <div class="score-bar">
+                                <div class="score-fill" id="institutionalScore"></div>
+                            </div>
+                            <p class="score-value" id="institutionalValue"></p>
+                        </div>
+                        <div class="dimension-score">
+                            <h3>Desire</h3>
+                            <div class="score-bar">
+                                <div class="score-fill" id="desireScore"></div>
+                            </div>
+                            <p class="score-value" id="desireValue"></p>
+                        </div>
+                    </div>
+
+                    <div class="results-actions">
+                        <button id="emailReportButton" class="btn btn-primary">
+                            <i class="fas fa-envelope"></i> Email Report
+                        </button>
+                        <button id="downloadReportButton" class="btn btn-secondary">
+                            <i class="fas fa-download"></i> Download Report
+                        </button>
+                        <button id="retakeButton" class="btn btn-outline">
+                            <i class="fas fa-redo"></i> Retake Assessment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Debug Panel Script -->
+    <script type="module">
+        import { logger } from './js/logger.js';
+
+        // Create debug panel
+        const debugPanel = document.getElementById('debugPanel');
+        const debugLogs = document.getElementById('debugLogs');
+        
+        // Add clear function to window
+        window.clearDebugPanel = function() {
+            debugLogs.innerHTML = '';
+            addToDebugPanel('info', 'Debug panel cleared');
+        };
+        
+        // Override console methods to also log to debug panel
+        const originalConsole = {
+            log: console.log,
+            debug: console.debug,
+            info: console.info,
+            warn: console.warn,
+            error: console.error
+        };
+
+        function getTimestamp() {
+            return new Date().toISOString().split('T')[1].slice(0, -1);
+        }
+
+        function addToDebugPanel(level, ...args) {
+            if (!debugLogs) return;
+
+            const log = document.createElement('div');
+            log.className = `log ${level}`;
+            
+            const timestamp = document.createElement('span');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = getTimestamp();
+            log.appendChild(timestamp);
+
+            const content = document.createElement('span');
+            content.textContent = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            log.appendChild(content);
+            
+            debugLogs.appendChild(log);
+            debugLogs.scrollTop = debugLogs.scrollHeight;
+        }
+
+        // Override console methods
+        console.log = (...args) => {
+            originalConsole.log(...args);
+            addToDebugPanel('debug', ...args);
+        };
+        console.debug = (...args) => {
+            originalConsole.debug(...args);
+            addToDebugPanel('debug', ...args);
+        };
+        console.info = (...args) => {
+            originalConsole.info(...args);
+            addToDebugPanel('info', ...args);
+        };
+        console.warn = (...args) => {
+            originalConsole.warn(...args);
+            addToDebugPanel('warn', ...args);
+        };
+        console.error = (...args) => {
+            originalConsole.error(...args);
+            addToDebugPanel('error', ...args);
+        };
+
+        // Override logger methods
+        const originalLogger = {
+            debug: logger.debug.bind(logger),
+            info: logger.info.bind(logger),
+            warn: logger.warn.bind(logger),
+            error: logger.error.bind(logger)
+        };
+
+        logger.debug = (message, data) => {
+            originalLogger.debug(message, data);
+            addToDebugPanel('debug', message, data ? JSON.stringify(data, null, 2) : '');
+        };
+        logger.info = (message, data) => {
+            originalLogger.info(message, data);
+            addToDebugPanel('info', message, data ? JSON.stringify(data, null, 2) : '');
+        };
+        logger.warn = (message, data) => {
+            originalLogger.warn(message, data);
+            addToDebugPanel('warn', message, data ? JSON.stringify(data, null, 2) : '');
+        };
+        logger.error = (message, data) => {
+            originalLogger.error(message, data);
+            addToDebugPanel('error', message, data ? JSON.stringify(data, null, 2) : '');
+        };
+
+        // Log initial debug panel setup
+        logger.info('Debug panel initialized');
+        
+        // Add DOM ready logging
+        document.addEventListener('DOMContentLoaded', () => {
+            logger.info('DOM content loaded');
+            // Log all sections
+            document.querySelectorAll('.assessment-section').forEach(section => {
+                logger.debug('Found section:', {
+                    id: section.id,
+                    isActive: section.classList.contains('active'),
+                    hasContent: !!section.querySelector('.content-card')
+                });
+            });
+        });
+
+        // Add error event listener
+        window.addEventListener('error', (event) => {
+            logger.error('Global error:', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error?.stack
+            });
+        });
+
+        // Add unhandled rejection listener
+        window.addEventListener('unhandledrejection', (event) => {
+            logger.error('Unhandled promise rejection:', {
+                reason: event.reason,
+                stack: event.reason?.stack
+            });
+        });
+    </script>
+
+    <script>
+        // Navigation handlers
+        window.handleBack = function() {
+            console.log('Back button clicked');
+            document.querySelectorAll('.assessment-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('welcomeSection').classList.add('active');
+            updateSectionDebug();
+        };
+
+        window.handleStartClick = async function() {
+            logger.debug('Start button clicked');
+            try {
+                // Hide all sections
+                document.querySelectorAll('.assessment-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show demographics section
+                const demographicsSection = document.getElementById('demographicsSection');
+                if (!demographicsSection) {
+                    throw new Error('Demographics section not found');
+                }
+                
+                demographicsSection.classList.add('active');
+                
+                // Update state with reset flag
+                await stateManager.setState({
+                    currentSection: 'demographicsSection',
+                    isReset: true,
+                    isInitializing: true
+                });
+                
+                logger.info('Successfully transitioned to demographics section');
+            } catch (error) {
+                logger.error('Error in handleStartClick:', error);
+            }
+        };
+
+        window.handleDemographicsSubmit = async function(event) {
+            event.preventDefault();
+            logger.debug('Demographics form submitted');
+
+            const form = event.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            
+            try {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Starting...';
+
+                // Get form data
+                const formData = {
+                    email: form.querySelector('#email').value,
+                    department: form.querySelector('#department').value,
+                    role: form.querySelector('#role').value,
+                    experience: form.querySelector('#experience').value
+                };
+
+                // Start assessment
+                const assessment = await assessmentManager.startAssessment(formData);
+                logger.info('Assessment created:', assessment);
+
+                // Show instructions section
+                document.querySelectorAll('.assessment-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                const instructionsSection = document.getElementById('instructionsSection');
+                if (!instructionsSection) {
+                    throw new Error('Instructions section not found');
+                }
+                
+                instructionsSection.classList.add('active');
+                
+                // Update state with initialization flag
+                await stateManager.setState({
+                    currentSection: 'instructionsSection',
+                    isInitializing: true
+                });
+                
+                logger.info('Successfully transitioned to instructions section');
+                
+                return false;
+            } catch (error) {
+                logger.error('Error in handleDemographicsSubmit:', error);
+                
+                const errorElement = document.getElementById('emailError');
+                errorElement.textContent = 'An error occurred. Please try again.';
+                errorElement.style.display = 'block';
+                
+                return false;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        };
+
+        window.startAssessment = async function() {
+            logger.debug('Starting assessment from instructions');
+            try {
+                // Hide all sections
+                document.querySelectorAll('.assessment-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show assessment section
+                const assessmentSection = document.getElementById('assessmentSection');
+                if (!assessmentSection) {
+                    throw new Error('Assessment section not found');
+                }
+                
+                assessmentSection.classList.add('active');
+                
+                // Update state with initialization flag
+                await stateManager.setState({
+                    currentSection: 'assessmentSection',
+                    isInitializing: true
+                });
+                
+                // Initialize first question
+                await updateQuestion();
+                
+                logger.info('Successfully started assessment');
+            } catch (error) {
+                logger.error('Error starting assessment:', error);
+            }
+        };
+
+        // Add section debug info
+        function updateSectionDebug() {
+            let debug = document.querySelector('.section-debug');
+            if (!debug) {
+                debug = document.createElement('div');
+                debug.className = 'section-debug';
+                document.body.appendChild(debug);
+            }
+
+            const sections = document.querySelectorAll('.assessment-section');
+            const info = Array.from(sections).map(section => 
+                `${section.id}: ${section.classList.contains('active') ? 'active' : 'hidden'}`
+            ).join(' | ');
+            
+            debug.textContent = `Sections: ${info}`;
+        }
+
+        // Monitor section changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    updateSectionDebug();
+                    console.log('Section state changed:', {
+                        section: mutation.target.id,
+                        isActive: mutation.target.classList.contains('active')
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.assessment-section').forEach(section => {
+                observer.observe(section, { attributes: true });
+            });
+            updateSectionDebug();
+        });
+    </script>
+
+    <script type="module">
+        import { logger } from './js/logger.js';
+        import stateManager from './js/state-manager.js';
+        import assessmentManager from './js/assessment-manager.js';
+        import { calculateScores } from './js/scoring.js';
+
+        // Initialize assessment UI
+        async function initializeAssessmentUI() {
+            try {
+                logger.debug('Initializing assessment UI');
+                
+                // Get DOM elements
+                const questionText = document.getElementById('questionText');
+                const scaleButtons = document.getElementById('scaleButtons');
+                const prevButton = document.getElementById('prevButton');
+                const nextButton = document.getElementById('nextButton');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const autoAdvanceToggle = document.getElementById('autoAdvanceToggle');
+
+                // Initialize state
+                let currentQuestion = null;
+                let isUpdating = false;
+                let updateQueue = Promise.resolve();
+                let answerQueue = [];
+                let isProcessingQueue = false;
+
+                // Ensure sequential updates
+                async function sequentialUpdate(updateFn) {
+                    const currentUpdate = updateQueue.then(async () => {
+                        if (isUpdating) {
+                            logger.warn('Update already in progress, waiting...');
+                            return;
+                        }
+                        isUpdating = true;
+                        try {
+                            await updateFn();
+                        } catch (error) {
+                            logger.error('Error in sequential update:', error);
+                            throw error;  // Propagate error to prevent silent failures
+                        } finally {
+                            isUpdating = false;
+                        }
+                    });
+                    updateQueue = currentUpdate.catch(() => {});  // Prevent unhandled rejection
+                    return currentUpdate;  // Return the actual promise for proper error handling
+                }
+
+                // Process answer queue
+                async function processAnswerQueue() {
+                    if (isProcessingQueue || answerQueue.length === 0) return;
+                    
+                    isProcessingQueue = true;
+                    try {
+                        while (answerQueue.length > 0) {
+                            const { value, autoAdvance } = answerQueue[0];
+                            
+                            // Get current state
+                            const state = stateManager.getState();
+                            const currentIndex = state.currentQuestionIndex;
+                            const totalQuestions = state.questions.length;
+                            
+                            try {
+                                // Update UI first
+                                const scaleButtons = document.getElementById('scaleButtons');
+                                const nextButton = document.getElementById('nextButton');
+                                
+                                await new Promise(resolve => {
+                                    requestAnimationFrame(() => {
+                                        // Reset all buttons
+                                        scaleButtons.querySelectorAll('.scale-button').forEach(button => {
+                                            button.classList.remove('selected');
+                                            button.disabled = false;
+                                        });
+                                        
+                                        // Select current button
+                                        const selectedButton = scaleButtons.querySelector(`[data-value="${value}"]`);
+                                        if (selectedButton) {
+                                            selectedButton.classList.add('selected');
+                                        }
+                                        nextButton.disabled = false;
+                                        resolve();
+                                    });
+                                });
+
+                                // Get current question and validate
+                                const currentQuestion = state.questions[currentIndex];
+                                if (!currentQuestion || !currentQuestion.id) {
+                                    throw new Error(`Invalid question at index ${currentIndex}`);
+                                }
+
+                                // Save answer
+                                await stateManager.setState({
+                                    answers: {
+                                        ...state.answers,
+                                        [currentQuestion.id]: value
+                                    }
+                                });
+
+                                logger.debug('Answer recorded:', {
+                                    questionId: currentQuestion.id,
+                                    value,
+                                    currentIndex,
+                                    totalQuestions,
+                                    remainingInQueue: answerQueue.length - 1
+                                });
+
+                                // Handle auto-advance with timeout
+                                if (autoAdvance && currentIndex < totalQuestions - 1) {
+                                    await new Promise(resolve => setTimeout(resolve, 300));
+                                    
+                                    // Verify state hasn't changed and we're still auto-advancing
+                                    const newState = stateManager.getState();
+                                    const autoAdvanceToggle = document.getElementById('autoAdvanceToggle');
+                                    
+                                    if (newState.currentQuestionIndex === currentIndex && autoAdvanceToggle.checked) {
+                                        const nextIndex = currentIndex + 1;
+                                        
+                                        // Validate next question exists
+                                        if (nextIndex >= totalQuestions) {
+                                            throw new Error('Attempted to advance beyond last question');
+                                        }
+                                        
+                                        const nextQuestion = state.questions[nextIndex];
+                                        if (!nextQuestion || !nextQuestion.id) {
+                                            throw new Error(`Invalid next question at index ${nextIndex}`);
+                                        }
+
+                                        // Update state and UI
+                                        await stateManager.setState({
+                                            currentQuestionIndex: nextIndex
+                                        });
+                                        
+                                        await updateQuestion();
+                                        
+                                        logger.debug('Auto-advanced to next question:', {
+                                            fromIndex: currentIndex,
+                                            toIndex: nextIndex,
+                                            nextQuestionId: nextQuestion.id
+                                        });
+
+                                        // Check if we should show completion
+                                        if (nextIndex === totalQuestions - 1) {
+                                            const allAnswered = state.questions.every(q => state.answers[q.id]);
+                                            if (allAnswered) {
+                                                await handleAssessmentComplete();
+                                            }
+                                        }
+                                    }
+                                } else if (currentIndex === totalQuestions - 1) {
+                                    // On last question, check if all questions are answered
+                                    const allAnswered = state.questions.every(q => state.answers[q.id]);
+                                    if (allAnswered) {
+                                        await handleAssessmentComplete();
+                                    }
+                                }
+                            } catch (error) {
+                                logger.error('Error processing answer:', {
+                                    error: error.message,
+                                    currentIndex,
+                                    value,
+                                    autoAdvance
+                                });
+                                // Enable all buttons on error
+                                const scaleButtons = document.getElementById('scaleButtons');
+                                if (scaleButtons) {
+                                    scaleButtons.querySelectorAll('.scale-button').forEach(button => {
+                                        button.disabled = false;
+                                    });
+                                }
+                            }
+                            
+                            // Remove processed answer
+                            answerQueue.shift();
+                        }
+                    } finally {
+                        isProcessingQueue = false;
+                        // Ensure buttons are enabled when queue processing ends
+                        const scaleButtons = document.getElementById('scaleButtons');
+                        if (scaleButtons) {
+                            scaleButtons.querySelectorAll('.scale-button').forEach(button => {
+                                button.disabled = false;
+                            });
+                        }
+                    }
+                }
+
+                // Handle answer selection with better error handling
+                async function handleAnswerSelection(value) {
+                    try {
+                        const autoAdvanceToggle = document.getElementById('autoAdvanceToggle');
+                        const scaleButtons = document.getElementById('scaleButtons');
+                        
+                        // Validate input
+                        if (!scaleButtons || value < 1 || value > 7) {
+                            logger.error('Invalid answer selection:', { value });
+                            return;
+                        }
+                        
+                        // Add answer to queue
+                        answerQueue.push({
+                            value,
+                            autoAdvance: autoAdvanceToggle?.checked || false
+                        });
+                        
+                        // Process queue
+                        await processAnswerQueue();
+                    } catch (error) {
+                        logger.error('Error in handleAnswerSelection:', error);
+                        // Enable all buttons on error
+                        const scaleButtons = document.getElementById('scaleButtons');
+                        if (scaleButtons) {
+                            scaleButtons.querySelectorAll('.scale-button').forEach(button => {
+                                button.disabled = false;
+                            });
+                        }
+                    }
+                }
+
+                // Update UI with current question
+                async function updateQuestion() {
+                    return sequentialUpdate(async () => {
+                        try {
+                            currentQuestion = assessmentManager.getCurrentQuestion();
+                            logger.debug('Current question:', currentQuestion);
+
+                            if (currentQuestion) {
+                                // Update question text
+                                questionText.textContent = currentQuestion.text;
+                                
+                                // Update progress
+                                const state = stateManager.getState();
+                                const currentIndex = state.currentQuestionIndex;
+                                const totalQuestions = assessmentManager.questions.length;
+                                const progress = ((currentIndex + 1) / totalQuestions) * 100;
+                                
+                                progressFill.style.width = `${progress}%`;
+                                progressText.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
+
+                                // Reset button states
+                                scaleButtons.querySelectorAll('.scale-button').forEach(button => {
+                                    button.classList.remove('selected');
+                                });
+
+                                // Check if there's a previous answer
+                                const previousAnswer = state.answers[currentQuestion.id];
+                                if (previousAnswer) {
+                                    const button = scaleButtons.querySelector(`[data-value="${previousAnswer}"]`);
+                                    if (button) {
+                                        button.classList.add('selected');
+                                        nextButton.disabled = false;
+                                    }
+                                } else {
+                                    nextButton.disabled = true;
+                                }
+
+                                // Update navigation buttons
+                                prevButton.disabled = currentIndex === 0;
+                                logger.debug('Question UI updated successfully', {
+                                    questionId: currentQuestion.id,
+                                    index: currentIndex,
+                                    total: totalQuestions
+                                });
+
+                                // Ensure the DOM has updated
+                                await new Promise(resolve => requestAnimationFrame(resolve));
+                            } else {
+                                logger.error('No current question available');
+                            }
+                        } catch (error) {
+                            logger.error('Error updating question:', error);
+                            throw error;
+                        }
+                    });
+                }
+
+                // Handle advancing to next question
+                async function advanceToNextQuestion() {
+                    return sequentialUpdate(async () => {
+                        try {
+                            const state = stateManager.getState();
+                            const totalQuestions = state.questions.length;
+                            
+                            logger.debug('Attempting to advance to next question', {
+                                currentIndex: state.currentQuestionIndex,
+                                totalQuestions,
+                                answersCount: Object.keys(state.answers).length
+                            });
+
+                            if (state.currentQuestionIndex < totalQuestions - 1) {
+                                const newIndex = state.currentQuestionIndex + 1;
+                                logger.debug('Advancing to index:', newIndex);
+                                
+                                await stateManager.setState({
+                                    currentQuestionIndex: newIndex
+                                });
+                                
+                                await updateQuestion();
+                                logger.debug('Advanced to next question successfully', {
+                                    newIndex,
+                                    question: state.questions[newIndex]
+                                });
+                            } else {
+                                logger.info('Reached last question, showing results');
+                                await handleAssessmentComplete();
+                            }
+                        } catch (error) {
+                            logger.error('Error advancing to next question:', error);
+                        }
+                    });
+                }
+
+                // Handle assessment completion
+                async function handleAssessmentComplete() {
+                    try {
+                        logger.info('Starting assessment completion');
+                        
+                        const state = stateManager.getState();
+                        if (!state) {
+                            throw new Error('No state available');
+                        }
+
+                        // Validate state has required properties
+                        if (!state.questions || !Array.isArray(state.questions)) {
+                            throw new Error('Invalid questions array in state');
+                        }
+                        if (!state.answers || typeof state.answers !== 'object') {
+                            throw new Error('Invalid answers object in state');
+                        }
+                        if (!state.startTime) {
+                            throw new Error('No start time in state');
+                        }
+                        
+                        // Validate all questions are answered
+                        const unansweredQuestions = state.questions.filter(q => !state.answers[q.id]);
+                        if (unansweredQuestions.length > 0) {
+                            const message = `Please answer all questions before completing the assessment. You have ${unansweredQuestions.length} unanswered questions.`;
+                            logger.warn('Assessment incomplete', { 
+                                unansweredCount: unansweredQuestions.length,
+                                unansweredIds: unansweredQuestions.map(q => q.id)
+                            });
+                            alert(message);
+                            return;
+                        }
+
+                        // Calculate scores
+                        logger.debug('Calculating scores', {
+                            answersCount: Object.keys(state.answers).length,
+                            questionsCount: state.questions.length,
+                            startTime: state.startTime
+                        });
+
+                        const results = await assessmentManager.completeAssessment();
+                        if (!results) {
+                            throw new Error('No results returned from completeAssessment');
+                        }
+                        if (!results.scores || typeof results.scores !== 'object') {
+                            throw new Error('Invalid scores object in results');
+                        }
+
+                        // Cache and validate DOM elements
+                        const resultsSection = document.getElementById('resultsSection');
+                        if (!resultsSection) {
+                            throw new Error('Results section element not found');
+                        }
+
+                        const scoreElements = {
+                            V: {
+                                score: document.getElementById('verityScore'),
+                                value: document.getElementById('verityValue')
+                            },
+                            A: {
+                                score: document.getElementById('associationScore'),
+                                value: document.getElementById('associationValue')
+                            },
+                            L: {
+                                score: document.getElementById('livedScore'),
+                                value: document.getElementById('livedValue')
+                            },
+                            I: {
+                                score: document.getElementById('institutionalScore'),
+                                value: document.getElementById('institutionalValue')
+                            },
+                            D: {
+                                score: document.getElementById('desireScore'),
+                                value: document.getElementById('desireValue')
+                            }
+                        };
+
+                        // Validate all UI elements exist
+                        const missingElements = [];
+                        Object.entries(scoreElements).forEach(([dimension, elements]) => {
+                            if (!elements.score || !elements.value) {
+                                missingElements.push(dimension);
+                            }
+                        });
+                        if (missingElements.length > 0) {
+                            throw new Error(`Missing UI elements for dimensions: ${missingElements.join(', ')}`);
+                        }
+
+                        // Update state atomically
+                        try {
+                            await stateManager.setState({
+                                currentSection: 'resultsSection',
+                                scores: results.scores,
+                                quality: results.quality,
+                                isCompleted: true,
+                                completedAt: new Date().toISOString()
+                            });
+                        } catch (stateError) {
+                            throw new Error(`Failed to update state: ${stateError.message}`);
+                        }
+
+                        // Update UI in a single paint
+                        try {
+                            await new Promise(resolve => {
+                                requestAnimationFrame(() => {
+                                    try {
+                                        // Hide all sections
+                                        document.querySelectorAll('.assessment-section').forEach(section => {
+                                            section.classList.remove('active');
+                                        });
+                                        
+                                        // Show results section
+                                        resultsSection.classList.add('active');
+
+                                        // Update score displays
+                                        Object.entries(results.scores).forEach(([dimension, score]) => {
+                                            const elements = scoreElements[dimension];
+                                            if (elements) {
+                                                elements.score.style.width = `${(score / 7) * 100}%`;
+                                                elements.value.textContent = score.toFixed(1);
+                                            }
+                                        });
+                                        resolve();
+                                    } catch (uiError) {
+                                        reject(new Error(`UI update failed: ${uiError.message}`));
+                                    }
+                                });
+                            });
+                        } catch (uiError) {
+                            throw new Error(`Failed to update UI: ${uiError.message}`);
+                        }
+
+                        logger.info('Assessment completed successfully', {
+                            scores: results.scores,
+                            quality: results.quality,
+                            currentSection: 'resultsSection'
+                        });
+                    } catch (error) {
+                        logger.error('Error completing assessment:', {
+                            error: error.message,
+                            stack: error.stack,
+                            state: stateManager.getState()
+                        });
+                        alert(`An error occurred while completing the assessment: ${error.message}`);
+                        throw error;
+                    }
+                }
+
+                // Initialize first question
+                await updateQuestion();
+                logger.info('Assessment UI initialized successfully');
+            } catch (error) {
+                logger.error('Failed to initialize assessment UI:', error);
+                throw error;
+            }
+        }
+
+        // Initialize when assessment section becomes active
+        const assessmentSectionObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.id === 'assessmentSection' && 
+                    mutation.target.classList.contains('active')) {
+                    initializeAssessmentUI();
+                }
+            });
+        });
+
+        const assessmentSection = document.getElementById('assessmentSection');
+        if (assessmentSection) {
+            assessmentSectionObserver.observe(assessmentSection, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+        }
+    </script>
+
+    <script>
+        // Add function to show summary
+        async function showSummary() {
+            try {
+                logger.info('Attempting to show summary page');
+                const state = stateManager.getState();
+                const summaryList = document.getElementById('summaryList');
+                const summarySection = document.getElementById('summarySection');
+                
+                if (!summaryList || !summarySection || !state.questions) {
+                    logger.error('Cannot show summary: missing elements', {
+                        hasSummaryList: !!summaryList,
+                        hasSummarySection: !!summarySection,
+                        hasQuestions: !!state.questions
+                    });
+                    return;
+                }
+
+                // Clear existing content
+                summaryList.innerHTML = '';
+
+                // Create summary items
+                state.questions.forEach((question, index) => {
+                    const answer = state.answers[question.id];
+                    const item = document.createElement('div');
+                    item.className = `summary-item${answer ? '' : ' unanswered'}`;
+                    
+                    item.innerHTML = `
+                        <div class="summary-item-header">
+                            <span class="summary-item-number">Question ${index + 1}</span>
+                            <button class="edit-button" data-index="${index}">Edit Answer</button>
+                        </div>
+                        <p class="summary-item-text">${question.text}</p>
+                        <div class="summary-item-answer">
+                            <span>Your answer:</span>
+                            <div class="summary-scale">
+                                ${[1,2,3,4,5,6,7].map(value => `
+                                    <button class="summary-scale-button${value === answer ? ' selected' : ''}" 
+                                            data-value="${value}"
+                                            data-question="${index}"
+                                            ${!answer ? '' : 'disabled'}>
+                                        ${value}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    summaryList.appendChild(item);
+                });
+
+                // Add event listeners
+                summaryList.addEventListener('click', async (event) => {
+                    if (event.target.classList.contains('edit-button')) {
+                        const index = parseInt(event.target.dataset.index);
+                        await stateManager.setState({
+                            currentSection: 'assessmentSection',
+                            currentQuestionIndex: index
+                        });
+                        await updateQuestion();
+                    } else if (event.target.classList.contains('summary-scale-button')) {
+                        const value = parseInt(event.target.dataset.value);
+                        const questionIndex = parseInt(event.target.dataset.question);
+                        const question = state.questions[questionIndex];
+                        
+                        if (question) {
+                            await stateManager.setState({
+                                answers: {
+                                    ...state.answers,
+                                    [question.id]: value
+                                }
+                            });
+                            await showSummary(); // Refresh summary
+                        }
+                    }
+                });
+
+                // Update state and show summary section
+                await stateManager.setState({
+                    currentSection: 'summarySection'
+                });
+
+                // Show summary section
+                document.querySelectorAll('.assessment-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                summarySection.classList.add('active');
+                
+                logger.info('Summary displayed successfully', {
+                    totalQuestions: state.questions.length,
+                    answeredQuestions: Object.keys(state.answers).length
+                });
+            } catch (error) {
+                logger.error('Error showing summary:', error);
+            }
+        }
+
+        // Update the last question handling to show summary
+        async function handleLastQuestion() {
+            try {
+                logger.info('Reached last question, showing summary');
+                await showSummary();
+            } catch (error) {
+                logger.error('Error handling last question:', error);
+            }
+        }
+
+        // Initialize summary section handlers
+        const returnToQuestionButton = document.getElementById('returnToQuestionButton');
+        if (returnToQuestionButton) {
+            returnToQuestionButton.onclick = async () => {
+                try {
+                    await stateManager.setState({
+                        currentSection: 'assessmentSection'
+                    });
+                    await updateQuestion();
+                } catch (error) {
+                    logger.error('Error returning to questions:', error);
+                }
+            };
+        }
+
+        const submitAssessmentButton = document.getElementById('submitAssessmentButton');
+        if (submitAssessmentButton) {
+            submitAssessmentButton.onclick = async () => {
+                try {
+                    const state = stateManager.getState();
+                    // Check if all questions are answered
+                    const unansweredCount = state.questions.filter(q => !state.answers[q.id]).length;
+                    
+                    if (unansweredCount > 0) {
+                        alert(`You still have ${unansweredCount} unanswered questions. Please complete all questions before submitting.`);
+                        return;
+                    }
+
+                    // Transition to results
+                    document.querySelectorAll('.assessment-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    document.getElementById('resultsSection').classList.add('active');
+                    
+                    await stateManager.setState({
+                        currentSection: 'resultsSection'
+                    });
+                    
+                    // Calculate and display results
+                    await handleAssessmentComplete();
+                } catch (error) {
+                    logger.error('Error submitting assessment:', error);
+                }
+            };
+        }
+    </script>
+
+    <script>
+        // Initialize results section handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const emailReportButton = document.getElementById('emailReportButton');
+            const downloadReportButton = document.getElementById('downloadReportButton');
+            const retakeButton = document.getElementById('retakeButton');
+
+            if (emailReportButton) {
+                emailReportButton.onclick = async () => {
+                    try {
+                        const state = stateManager.getState();
+                        await assessmentManager.emailReport(state.scores);
+                        alert('Report has been sent to your email!');
+                    } catch (error) {
+                        logger.error('Error sending email report:', error);
+                        alert('Failed to send report. Please try again.');
+                    }
+                };
+            }
+
+            if (downloadReportButton) {
+                downloadReportButton.onclick = async () => {
+                    try {
+                        const state = stateManager.getState();
+                        await assessmentManager.downloadReport(state.scores);
+                    } catch (error) {
+                        logger.error('Error downloading report:', error);
+                        alert('Failed to download report. Please try again.');
+                    }
+                };
+            }
+
+            if (retakeButton) {
+                retakeButton.onclick = async () => {
+                    try {
+                        // Clear state and return to demographics
+                        sessionStorage.removeItem('validState');
+                        document.querySelectorAll('.assessment-section').forEach(section => {
+                            section.classList.remove('active');
+                        });
+                        document.getElementById('demographicsSection').classList.add('active');
+                        
+                        // Reset form
+                        const form = document.getElementById('demographicsForm');
+                        if (form) {
+                            form.reset();
+                        }
+
+                        // Reset state
+                        await stateManager.setState({
+                            currentSection: 'demographicsSection',
+                            assessment: null,
+                            questions: [],
+                            currentQuestionIndex: 0,
+                            answers: {},
+                            demographics: null,
+                            scores: null,
+                            isReset: true
+                        });
+
+                        logger.info('Assessment reset for retake');
+                    } catch (error) {
+                        logger.error('Error resetting assessment:', error);
+                        alert('Failed to reset assessment. Please refresh the page.');
+                    }
+                };
+            }
+        });
+    </script>
+
+    <script>
+        // Run connection test on load
+        window.addEventListener('load', async () => {
+            const result = await window.testSupabaseConnection();
+            console.log('Connection test result:', result);
+        });
+    </script>
+</body>
+</html> 
