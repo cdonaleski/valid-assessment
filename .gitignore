@@ -47,3 +47,4 @@ logs/
 *.local
 local/ 
 .env*.local
+cursor_deploy_key
