@@ -14,7 +14,7 @@ A web-based assessment platform for evaluating decision-making styles and provid
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/valid-assessment.git
+git clone https://github.com/cdonaleski/valid-assessment.git
 cd valid-assessment
 ```
 
