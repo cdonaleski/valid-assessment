@@ -49,6 +49,11 @@ npm i -g vercel
 vercel
 ```
 
+3. Set up environment variables in Vercel dashboard:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `VALID_ENV=production`
+
 ### Supabase Setup
 
 1. Create a new project in Supabase

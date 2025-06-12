@@ -48,3 +48,4 @@ logs/
 local/ 
 .env*.local
 cursor_deploy_key
+.vercel

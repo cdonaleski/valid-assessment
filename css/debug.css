@@ -14,12 +14,16 @@
     font-size: 12px;
     line-height: 1.4;
     z-index: 9999999;
-    display: flex;
+    display: none;
     flex-direction: column;
     overflow: hidden;
     transition: all 0.2s ease;
     opacity: 0.95;
     border: 1px solid #e0e0e0;
+}
+
+.debug-panel.show {
+    display: flex;
 }
 
 /* Debug Header */

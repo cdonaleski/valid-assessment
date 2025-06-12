@@ -78,6 +78,15 @@
         </div>
     </header>
 
+    <!-- Dev Mode Toggle Switch -->
+    <div class="dev-mode-toggle-switch">
+        <label class="switch">
+            <input type="checkbox" id="devModeToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="dev-mode-label">Dev Mode</span>
+    </div>
+
     <div class="container">
         <!-- Main Content -->
         <main>
@@ -218,6 +227,25 @@
         // Initialize results page
         document.addEventListener('DOMContentLoaded', () => {
             initializeResults();
+        });
+
+        // Dev Mode Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const devToggle = document.getElementById('devModeToggle');
+            const debugPanel = document.getElementById('debugPanel');
+            const testDataBtn = document.getElementById('generateTestData');
+            if (devToggle && debugPanel) {
+                devToggle.addEventListener('change', function() {
+                    debugPanel.classList.toggle('show', devToggle.checked);
+                    if (testDataBtn) {
+                        testDataBtn.style.display = devToggle.checked ? 'inline-block' : 'none';
+                    }
+                });
+                // Hide test data button by default
+                if (testDataBtn) {
+                    testDataBtn.style.display = 'none';
+                }
+            }
         });
     </script>
 </body>
