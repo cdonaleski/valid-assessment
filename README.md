@@ -1,114 +1,80 @@
-# VALID Assessment Tool
+# VALID Assessment Platform
 
-A web-based implementation of the VALID (Verity, Association, Lived Experience, Institutional Knowledge, Desire) decision-making style assessment.
+A web-based assessment platform for evaluating decision-making styles and providing personalized feedback.
 
 ## Features
 
-- Complete VALID assessment questionnaire
-- Real-time scoring and progress tracking
-- Automatic result calculation and interpretation
+- Interactive assessment interface
+- Real-time scoring and analysis
 - PDF report generation
-- Email notifications
 - Offline support with local storage
-- Admin dashboard for result analysis
+- Secure data handling with Supabase
 
-## Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
-- A Supabase account for database functionality
-- An EmailJS account for email notifications
-
-## Installation
+## Development
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/cdonaleski/valid-assessment.git
+git clone https://github.com/yourusername/valid-assessment.git
 cd valid-assessment
 ```
 
-2. Copy the example environment file and update with your credentials:
-```bash
-cp .env.example .env
-```
-
-3. Update the `.env` file with your credentials:
-- Supabase URL and anonymous key
-- EmailJS configuration
-- Other environment-specific settings
-
-4. Install dependencies:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-5. Start the development server:
-```bash
-npm start
-```
-
-The application will be available at `http://localhost:8080`
-
-## Project Structure
-
-```
-valid-assessment/
-├── js/
-│   ├── questions-data.js   # Core assessment questions
-│   ├── questions.js        # Question management logic
-│   ├── database.js         # Database operations
-│   ├── config.js          # Configuration management
-│   └── ...
-├── css/
-│   └── styles.css
-├── index.html
-├── supabase/
-│   └── migrations/        # Database schema and migrations
-└── ...
-```
-
-## Development
-
-### Environment Setup
-
-The project uses environment variables for configuration. Copy `.env.example` to `.env` and update the values:
-
+3. Create a `.env` file with your environment variables:
 ```env
 SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_key
-...
+SUPABASE_ANON_KEY=your_supabase_anon_key
+VALID_ENV=development
 ```
 
-### Database Setup
-
-1. Install Supabase CLI
-2. Initialize the database:
+4. Start the development server:
 ```bash
-supabase init
-supabase db reset
+npm run dev
 ```
 
-### Testing
+## Deployment
 
-Run the test suite:
+### Vercel Deployment
+
+1. Install Vercel CLI:
 ```bash
-npm test
+npm i -g vercel
 ```
 
-## Contributing
+2. Deploy to Vercel:
+```bash
+vercel
+```
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Supabase Setup
+
+1. Create a new project in Supabase
+2. Set up the database schema
+3. Configure environment variables in Vercel with your Supabase credentials
+
+### GitHub Integration
+
+1. Create a new repository on GitHub
+2. Push your code:
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/valid-assessment.git
+git push -u origin main
+```
+
+3. Connect your GitHub repository to Vercel for automatic deployments
+
+## Environment Variables
+
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `VALID_ENV`: Environment (development/production)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- VALID Assessment methodology creators
-- Supabase for database functionality
-- EmailJS for email services
+MIT

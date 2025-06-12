@@ -228,10 +228,9 @@ export function calculateTeamRisk(teamPersonas) {
 }
 
 /**
- * Generate personalized development recommendations
- * @param {Object} persona - Identified persona
- * @param {Object} scores - VALID dimension scores
- * @returns {Object} Development plan and recommendations
+ * Generate personalized validation insights
+ * @param {Object} scores - The assessment scores
+ * @returns {Array} Array of insights
  */
 export function generateDevelopmentPlan(persona, scores) {
     const weaknesses = identifyWeaknesses(scores);

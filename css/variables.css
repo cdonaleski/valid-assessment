@@ -1,0 +1,28 @@
+:root {
+    /* Colors */
+    --primary: #0D4E5C;
+    --primary-dark: #0A3B45;
+    --primary-light: #E5F0F2;
+    --success: #28a745;
+    --warning: #ffc107;
+    --error: #dc3545;
+    --surface: #f8f9fa;
+    --background: #ffffff;
+    --text: #2C3E50;
+    --text-light: #6c757d;
+    --border: #dee2e6;
+
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-loose: 1.75;
+
+    /* ... existing code ... */
+} 

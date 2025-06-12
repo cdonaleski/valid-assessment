@@ -122,4 +122,43 @@ if [ $? -eq 0 ]; then
 else
     print_status "$RED" "Build failed"
     exit 1
-fi 
+fi
+
+# Function to replace placeholders in env.js
+replace_env_vars() {
+    local env_file="js/env.js"
+    local temp_file="js/env.js.tmp"
+
+    # Read the current env.js file
+    cat "$env_file" > "$temp_file"
+
+    # Replace environment variables
+    sed -i '' "s|__VALID_ENV__|${VALID_ENV:-development}|g" "$temp_file"
+    sed -i '' "s|__SUPABASE_URL__|${SUPABASE_URL}|g" "$temp_file"
+    sed -i '' "s|__SUPABASE_ANON_KEY__|${SUPABASE_ANON_KEY}|g" "$temp_file"
+    sed -i '' "s|__EMAILJS_SERVICE_ID__|${EMAILJS_SERVICE_ID:-}|g" "$temp_file"
+    sed -i '' "s|__EMAILJS_TEMPLATE_ID__|${EMAILJS_TEMPLATE_ID:-}|g" "$temp_file"
+    sed -i '' "s|__EMAILJS_USER_ID__|${EMAILJS_USER_ID:-}|g" "$temp_file"
+    sed -i '' "s|__SANDBOX_EMAIL__|${SANDBOX_EMAIL:-test@example.com}|g" "$temp_file"
+
+    # Move the temp file back
+    mv "$temp_file" "$env_file"
+}
+
+# Load environment variables from .env file if it exists
+if [ -f ".env" ]; then
+    echo "Loading environment variables from .env file..."
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Check for required environment variables
+if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+    echo "Error: SUPABASE_URL and SUPABASE_ANON_KEY must be set"
+    exit 1
+fi
+
+# Replace environment variables in env.js
+echo "Replacing environment variables in env.js..."
+replace_env_vars
+
+echo "Build completed successfully" 

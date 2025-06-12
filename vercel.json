@@ -18,6 +18,10 @@
     {
       "src": "img/**/*",
       "use": "@vercel/static"
+    },
+    {
+      "src": "simple-server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -35,6 +39,10 @@
     },
     {
       "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "simple-server.js"
     }
   ],
   "env": {

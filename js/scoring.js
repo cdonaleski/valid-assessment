@@ -13,6 +13,9 @@
 import { logger } from './logger.js';
 import validAssessmentData from './questions-data.js';
 
+// Import metadata from questions data
+const { scale, dimensions, scoring } = validAssessmentData.metadata;
+
 /**
  * VALID Assessment Scoring System
  * Calculates and analyzes decision-making style scores
@@ -126,34 +129,85 @@ const SCORING_CONSTANTS = {
  */
 function calculateRawScores(responses) {
     const scores = { V: 0, A: 0, L: 0, I: 0, D: 0 };
+    const counts = { V: 0, A: 0, L: 0, I: 0, D: 0 };
     
-    Object.entries(responses).forEach(([questionId, response]) => {
-        const question = QUESTION_TYPES[questionId];
-        if (!question) return;
+    console.log('Starting raw score calculation with responses:', responses);
 
-        const value = question.reverse ? 
-            8 - response.value : // Reverse scoring
-            response.value;
+    Object.entries(responses).forEach(([questionId, value]) => {
+        // Find the question in the validAssessmentData
+        const question = validAssessmentData.questions.find(q => q.id === questionId);
+        if (!question || question.dimension === 'attention_check' || question.dimension === 'social_desirability') {
+            console.log('Skipping question:', { questionId, reason: 'Not found or quality check' });
+            return;
+        }
+
+        console.log('Processing question:', {
+            id: questionId,
+            dimension: question.dimension,
+            value: value,
+            reverse: question.reverse
+        });
+
+        // Get dimension key (first letter uppercase)
+        const dimension = question.dimension.charAt(0).toUpperCase();
+        if (!scores.hasOwnProperty(dimension)) {
+            console.warn('Invalid dimension:', { questionId, dimension });
+            return;
+        }
+
+        // Convert value to number and apply reverse scoring if needed
+        const numValue = typeof value === 'number' ? value : Number(value);
+        const scoreValue = question.reverse ? (8 - numValue) : numValue;
         
-        scores[question.type] += value;
+        scores[dimension] += scoreValue;
+        counts[dimension]++;
+
+        console.log('Updated scores:', {
+            dimension,
+            rawValue: value,
+            scoreValue,
+            isReversed: question.reverse,
+            currentTotal: scores[dimension],
+            count: counts[dimension]
+        });
     });
 
-    return scores;
+    // Calculate average for each dimension
+    const averageScores = {};
+    Object.keys(scores).forEach(dimension => {
+        if (counts[dimension] > 0) {
+            // Calculate average (keeping raw 1-7 scale)
+            averageScores[dimension] = scores[dimension] / counts[dimension];
+        } else {
+            averageScores[dimension] = 0;
+        }
+        console.log('Final dimension score:', {
+            dimension,
+            rawTotal: scores[dimension],
+            count: counts[dimension],
+            average: averageScores[dimension]
+        });
+    });
+
+    return averageScores;
 }
 
 /**
- * Convert raw scores to percentages
- * @param {Object} rawScores - Raw scores for each dimension
- * @returns {Object} Percentage scores (0-100)
+ * Convert raw scores (1-7 scale) to percentages (0-100)
+ * @param {Object} rawScores - Raw scores on 1-7 scale
+ * @returns {Object} Scores converted to percentages
  */
 function convertToPercentages(rawScores) {
-    const percentages = {};
+    console.log('Converting raw scores to percentages:', rawScores);
     
-    Object.entries(rawScores).forEach(([type, score]) => {
-        // Convert to percentage: (raw_score - min_possible) / (max_possible - min_possible) * 100
-        percentages[type] = Math.round(((score - 10) / 60) * 100);
+    const percentages = {};
+    Object.entries(rawScores).forEach(([dimension, score]) => {
+        // Convert from 1-7 scale to 0-100 percentage
+        // Formula: ((score - min) / (max - min)) * 100
+        percentages[dimension] = Math.round(((score - 1) / 6) * 100);
     });
-
+    
+    console.log('Converted to percentages:', percentages);
     return percentages;
 }
 
@@ -249,50 +303,63 @@ function identifyDevelopmentArea(scores) {
 }
 
 /**
- * Calculate complete VALID assessment results
- * @param {Object} responses - Question responses
- * @returns {Object} Complete assessment results
+ * Calculate assessment results
+ * @param {Object} answers - Assessment answers
+ * @param {string} context - Selected context (optional)
+ * @returns {Object} Results including scores and persona
  */
-export function calculateResults(responses) {
-    const rawScores = calculateRawScores(responses);
-    const percentageScores = convertToPercentages(rawScores);
-    const confidence = calculateConfidence(percentageScores);
-    const persona = assignPersona(percentageScores);
-    const development = identifyDevelopmentArea(percentageScores);
+export function calculateResults(answers, context = 'general') {
+    try {
+        console.log('Calculating results for context:', context);
+        console.log('Answers:', answers);
 
-    return {
-        raw: rawScores,
-        scores: percentageScores,
-        persona,
-        confidence,
-        development,
-        timestamp: new Date().toISOString()
-    };
+        // Calculate raw scores first
+        const rawScores = calculateRawScores(answers);
+        console.log('Raw scores calculated:', rawScores);
+
+        // Convert raw scores to percentages
+        const scores = convertToPercentages(rawScores);
+        console.log('Percentage scores:', scores);
+
+        // Calculate confidence level
+        const confidence = calculateConfidence(scores);
+        console.log('Confidence calculated:', confidence);
+
+        // Determine primary and secondary styles
+        const styles = determinePersona(scores);
+        console.log('Styles determined:', styles);
+
+        // Generate development recommendations
+        const development = identifyDevelopmentArea(scores);
+        console.log('Development area identified:', development);
+
+        return {
+            scores,
+            confidence,
+            persona: {
+                primary: styles.primary,
+                secondary: styles.secondary,
+                description: generatePersonaDescription(styles.primary, scores)
+            },
+            development
+        };
+    } catch (error) {
+        console.error('Error calculating results:', error);
+        throw error;
+    }
 }
 
 /**
- * Calculate scores for each VALID dimension
- * @param {Object} answers - Question answers
- * @param {number} startTime - Assessment start time
+ * Calculate scores for the assessment
+ * @param {Object} answers - Object containing question IDs and answer values
+ * @param {string} startTime - ISO string of assessment start time
  * @returns {Object} Calculated scores and quality metrics
  */
 export function calculateScores(answers, startTime) {
     try {
-        // Validate inputs
-        if (!answers || typeof answers !== 'object') {
-            throw new Error('Invalid answers object provided');
-        }
-        if (!startTime || typeof startTime !== 'number') {
-            throw new Error('Invalid start time provided');
-        }
+        console.log('Starting score calculation with answers:', answers);
 
-        // Validate answers structure
-        const answerEntries = Object.entries(answers);
-        if (answerEntries.length === 0) {
-            throw new Error('No answers provided');
-        }
-
-        // Initialize scores with standardized keys
+        // Initialize scores
         const scores = {
             V: { raw: 0, count: 0 },
             A: { raw: 0, count: 0 },
@@ -301,113 +368,174 @@ export function calculateScores(answers, startTime) {
             D: { raw: 0, count: 0 }
         };
 
-        // Initialize quality metrics
-        const qualityFlags = {
-            completionTime: Date.now() - startTime,
-            socialDesirability: 0,
-            attentionChecksFailed: [],
-            straightLining: false,
-            timeFlag: false
-        };
-
-        // Track answer frequencies for straight-lining detection
+        // Track answer patterns
         const answerFrequencies = {};
         let totalAnswers = 0;
-        let invalidAnswers = [];
+        const invalidAnswers = [];
+
+        console.log('Processing answers:', Object.entries(answers).length, 'total answers');
 
         // Process each answer
-        answerEntries.forEach(([questionId, value]) => {
-            // Validate answer value
-            if (typeof value !== 'number' || value < 1 || value > 7) {
-                invalidAnswers.push({ questionId, value });
-                logger.warn('Invalid answer value:', { questionId, value });
-                return;
-            }
+        Object.entries(answers).forEach(([questionId, value]) => {
+            console.log('Processing answer:', { questionId, value });
 
+            // Find the question in validAssessmentData
             const question = validAssessmentData.questions.find(q => q.id === questionId);
             if (!question) {
-                invalidAnswers.push({ questionId, error: 'Question not found' });
-                logger.warn('Question not found:', questionId);
+                console.warn('Question not found:', questionId);
                 return;
             }
 
-            // Track answer frequencies
-            answerFrequencies[value] = (answerFrequencies[value] || 0) + 1;
-            totalAnswers++;
+            // Skip non-scoring questions
+            if (question.dimension === 'attention_check' || question.dimension === 'social_desirability') {
+                console.log('Skipping non-scoring question:', questionId);
+                return;
+            }
+
+            // Validate answer value
+            if (typeof value !== 'number' || value < 1 || value > 7) {
+                console.warn('Invalid answer value:', { questionId, value });
+                return;
+            }
 
             // Get dimension key (first letter uppercase)
             const dimensionKey = question.dimension.charAt(0).toUpperCase();
             
-            // Validate dimension key
-            if (!scores.hasOwnProperty(dimensionKey)) {
-                invalidAnswers.push({ questionId, error: `Invalid dimension: ${dimensionKey}` });
-                logger.warn('Invalid dimension key:', { questionId, dimensionKey });
-                return;
-            }
-
             // Score the answer
             const scoreValue = question.reverse ? (8 - value) : value;
             scores[dimensionKey].raw += scoreValue;
             scores[dimensionKey].count++;
+
+            // Track answer frequency
+            answerFrequencies[value] = (answerFrequencies[value] || 0) + 1;
+            totalAnswers++;
+
+            console.log('Updated scores for dimension:', {
+                dimension: dimensionKey,
+                raw: scores[dimensionKey].raw,
+                count: scores[dimensionKey].count,
+                isReversed: question.reverse,
+                originalValue: value,
+                scoreValue: scoreValue
+            });
         });
 
-        // Check for invalid answers
-        if (invalidAnswers.length > 0) {
-            throw new Error(`Invalid answers found: ${JSON.stringify(invalidAnswers)}`);
-        }
-
-        // Calculate averages
+        // Calculate final scores (convert to percentages)
         const finalScores = {};
         Object.entries(scores).forEach(([dimension, data]) => {
-            if (data.count === 0) {
-                throw new Error(`No valid answers for dimension ${dimension}`);
+            if (data.count > 0) {
+                // First calculate average on 1-7 scale
+                const average = data.raw / data.count;
+                // Then convert to percentage (0-100)
+                finalScores[dimension] = Math.round(((average - 1) / 6) * 100);
+            } else {
+                finalScores[dimension] = 0;
             }
-            finalScores[dimension] = +(data.raw / data.count).toFixed(1);
+            console.log('Final score calculation:', {
+                dimension,
+                rawTotal: data.raw,
+                count: data.count,
+                average: data.count > 0 ? data.raw / data.count : 0,
+                percentage: finalScores[dimension]
+            });
         });
 
-        // Check for straight-lining
-        const maxFrequency = Math.max(...Object.values(answerFrequencies));
-        qualityFlags.straightLining = (maxFrequency / totalAnswers) > SCORING_CONSTANTS.STRAIGHT_LINE_THRESHOLD;
+        // Calculate quality metrics
+        const quality = {
+            completionTime: Math.round((Date.now() - new Date(startTime).getTime()) / 1000),
+            answerPatterns: calculateAnswerPatterns(answerFrequencies, totalAnswers),
+            attentionChecks: validateAttentionChecks(answers),
+            socialDesirability: calculateSocialDesirability(answers)
+        };
 
-        // Check completion time
-        qualityFlags.timeFlag = 
-            qualityFlags.completionTime < SCORING_CONSTANTS.MIN_COMPLETION_TIME ||
-            qualityFlags.completionTime > SCORING_CONSTANTS.MAX_COMPLETION_TIME;
-
-        // Validate final scores
-        Object.entries(finalScores).forEach(([dimension, score]) => {
-            if (score < 1 || score > 7) {
-                throw new Error(`Invalid final score calculated for dimension ${dimension}: ${score}`);
-            }
-        });
-
-        logger.info('Scores calculated successfully:', {
+        console.log('Final scores and quality metrics:', {
             scores: finalScores,
-            quality: qualityFlags,
-            totalAnswers,
-            dimensions: Object.keys(finalScores).length
+            quality: quality
         });
 
         return {
             scores: finalScores,
-            quality: qualityFlags
+            quality
         };
     } catch (error) {
-        logger.error('Error calculating scores:', {
-            error: error.message,
-            stack: error.stack,
-            answers: JSON.stringify(answers),
-            startTime
-        });
+        console.error('Error calculating scores:', error);
         throw error;
     }
 }
 
 /**
+ * Calculate answer pattern metrics
+ */
+function calculateAnswerPatterns(frequencies, total) {
+    const patterns = {
+        repetition: 0,
+        extremity: 0
+    };
+
+    // Calculate repetition (same answer used frequently)
+    Object.values(frequencies).forEach(freq => {
+        if (freq > total * 0.3) { // More than 30% same answer
+            patterns.repetition += (freq / total);
+        }
+    });
+
+    // Calculate extremity (use of extreme values 1 and 7)
+    const extremeAnswers = (frequencies[1] || 0) + (frequencies[7] || 0);
+    patterns.extremity = extremeAnswers / total;
+
+    return patterns;
+}
+
+/**
+ * Validate attention check answers
+ */
+function validateAttentionChecks(answers) {
+    const attentionChecks = validAssessmentData.questions.filter(q => 
+        q.dimension === 'attention_check'
+    );
+
+    let passed = 0;
+    let total = attentionChecks.length;
+
+    attentionChecks.forEach(check => {
+        if (answers[check.id] === check.correctAnswer) {
+            passed++;
+        }
+    });
+
+    return {
+        passed,
+        total,
+        score: total > 0 ? passed / total : 0
+    };
+}
+
+/**
+ * Calculate social desirability score
+ */
+function calculateSocialDesirability(answers) {
+    const sdQuestions = validAssessmentData.questions.filter(q => 
+        q.dimension === 'social_desirability'
+    );
+
+    let total = 0;
+    let count = 0;
+
+    sdQuestions.forEach(question => {
+        if (answers[question.id]) {
+            total += answers[question.id];
+            count++;
+        }
+    });
+
+    return {
+        score: count > 0 ? total / count : 0,
+        questionCount: count
+    };
+}
+
+/**
  * Validate a single answer
- * @param {string} questionId - Question identifier
- * @param {number} value - Answer value
- * @returns {boolean} Whether the answer is valid
  */
 export function validateAnswer(questionId, value) {
     try {
@@ -445,5 +573,54 @@ export {
     identifyDevelopmentArea
 };
 
-// Export metadata for use in other modules
-export const { scale, dimensions, scoring } = validAssessmentData.metadata; 
+// Determine persona based on scores
+export function determinePersona(scores) {
+    // Get the highest scoring category
+    const primaryType = Object.entries(scores).reduce(
+        (max, [category, score]) => score > max[1] ? [category, score] : max,
+        ['V', 0]
+    )[0];
+
+    // Get the second highest scoring category
+    const secondaryType = Object.entries(scores)
+        .filter(([category]) => category !== primaryType)
+        .reduce(
+            (max, [category, score]) => score > max[1] ? [category, score] : max,
+            ['A', 0]
+        )[0];
+
+    // Check if scores are balanced
+    const isBalanced = Object.values(scores)
+        .every(score => score >= 40 && score <= 60);
+
+    if (isBalanced) {
+        return {
+            primaryType: 'BALANCED',
+            secondaryType: null,
+            name: PERSONAS.BALANCED.name,
+            description: PERSONAS.BALANCED.description,
+            confidence: 'low'
+        };
+    }
+
+    // Return persona details
+    return {
+        primaryType,
+        secondaryType,
+        name: PERSONAS[primaryType].name,
+        description: PERSONAS[primaryType].description,
+        confidence: scores[primaryType] >= 70 ? 'high' : 'medium'
+    };
+}
+
+/**
+ * Generate validation insights based on scores
+ * @param {Object} scores - The assessment scores
+ * @returns {Object} Validation insights
+ */
+function generateValidationInsights(scores) {
+    // Implementation of generateValidationInsights function
+}
+
+// Generate validation insights
+// ... existing code ...

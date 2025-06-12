@@ -17,256 +17,211 @@ import supabaseClient from './supabase-client.js';
 const STORAGE_KEYS = {
     ASSESSMENTS: 'valid_assessments',
     CURRENT_ASSESSMENT: 'valid_current_assessment',
-    OFFLINE_QUEUE: 'valid_offline_queue'
+    OFFLINE_QUEUE: 'valid_offline_queue',
+    LAST_SYNC: 'valid_last_sync'
 };
 
-// Initialize Supabase client with better error handling
+// Database state
 let supabase = null;
 let isOnline = false;
 let offlineQueue = [];
 let initializationInProgress = false;
 let initializationPromise = null;
+let lastSyncTime = null;
 
-// Load offline queue from storage
+// Load offline data
 try {
     offlineQueue = JSON.parse(localStorage.getItem(STORAGE_KEYS.OFFLINE_QUEUE) || '[]');
+    lastSyncTime = localStorage.getItem(STORAGE_KEYS.LAST_SYNC);
 } catch (error) {
-    logger.warn('Failed to load offline queue:', error);
+    logger.warn('Failed to load offline data:', error);
     offlineQueue = [];
+    lastSyncTime = null;
 }
 
-async function initializeDatabase() {
-    // Return existing initialization promise if already in progress
-    if (initializationPromise) {
+/**
+ * Initialize database connection with retries
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * @param {number} retryDelay - Delay between retries in milliseconds
+ * @returns {Promise<boolean>} - True if initialization successful
+ */
+async function initializeDatabase(maxRetries = 3, retryDelay = 1000) {
+    if (initializationInProgress) {
         return initializationPromise;
     }
 
-    // Create new initialization promise
+    initializationInProgress = true;
     initializationPromise = (async () => {
-        if (initializationInProgress) {
-            logger.warn('Database initialization already in progress');
-            return false;
-        }
-
-        initializationInProgress = true;
+        let retryCount = maxRetries;
+        let lastError = null;
         
-        try {
-            logger.debug('Starting database initialization');
-            
-            // Initialize Supabase with retries
-            let retryCount = 3;
-            let lastError = null;
-            
-            while (retryCount > 0) {
-                try {
-                    logger.debug(`Attempting Supabase initialization (${retryCount} retries left)`);
-                    
-                    // Wait for Supabase client initialization
-                    supabase = await supabaseClient.initialize();
-                    
-                    if (!supabase) {
-                        throw new Error('Supabase client initialization returned null');
-                    }
-                    
-                    // Test connection
-                    const { data, error } = await supabase
-                        .from('questions')
+        while (retryCount > 0) {
+            try {
+                // Check environment
+                if (!window.__env__?.SUPABASE_URL || !window.__env__?.SUPABASE_ANON_KEY) {
+                    throw new Error('Missing Supabase configuration');
+                }
+
+                // Initialize client
+                supabase = await supabaseClient.initialize();
+                if (!supabase) {
+                    throw new Error('Failed to initialize Supabase client');
+                }
+                
+                // Test connection by checking if assessments table exists
+                const { data, error } = await supabase
+                    .from('assessments')
+                    .select('count')
+                    .limit(1);
+
+                if (error && error.code === '42P01') {
+                    // Table doesn't exist, create it
+                    await supabase.rpc('create_tables_if_not_exist');
+                    // Try the test query again
+                    const retryResult = await supabase
+                        .from('assessments')
                         .select('count')
-                        .limit(1)
-                        .maybeSingle();
-                        
-                    if (error) {
-                        throw error;
-                    }
-                    
-                    isOnline = true;
-                    logger.info('Database initialization successful');
-                    
-                    // Process offline queue if we're online
-                    if (offlineQueue.length > 0) {
-                        logger.info(`Processing ${offlineQueue.length} offline operations`);
-                        await processOfflineQueue();
-                    }
-                    
-                    return true;
-                } catch (error) {
-                    lastError = error;
-                    logger.warn(`Initialization attempt failed (${retryCount} retries left):`, {
-                        error: error.message,
-                        stack: error.stack
-                    });
-                    retryCount--;
-                    
-                    if (retryCount > 0) {
-                        const delay = Math.min(1000 * Math.pow(2, 3 - retryCount), 5000);
-                        logger.debug(`Waiting ${delay}ms before retry`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                        .limit(1);
+                    if (retryResult.error) throw retryResult.error;
+                } else if (error) {
+                    throw error;
+                }
+
+                isOnline = true;
+                logger.info('Database connection established');
+
+                // Process offline queue if any
+                if (offlineQueue.length > 0) {
+                    await processOfflineQueue();
+                }
+
+                return true;
+            } catch (error) {
+                retryCount--;
+                lastError = error;
+                logger.warn(`Database initialization attempt failed (${retryCount} retries left):`, error);
+
+                if (retryCount > 0) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    retryDelay *= 2; // Exponential backoff
                 }
             }
-            
-            throw lastError || new Error('Failed to initialize database after all retries');
-        } catch (error) {
-            logger.error('Database initialization failed:', {
-                error: error.message,
-                stack: error.stack,
-                isOnline,
-                hasSupabase: !!supabase,
-                queueLength: offlineQueue.length
-            });
-            
-            // Clear supabase client
-            supabase = null;
-            isOnline = false;
-            
-            throw error;
-        } finally {
-            initializationInProgress = false;
-            initializationPromise = null;
         }
-    })();
 
-    return initializationPromise;
-}
-
-// Initialize database connection with retries
-let retryCount = 3;
-let retryDelay = 1000; // 1 second
-
-async function initializeDatabaseWithRetry() {
-    try {
-        logger.debug('Attempting database initialization');
-        const result = await initializeDatabase();
-        return result;
-    } catch (error) {
-        if (retryCount > 0) {
-            retryCount--;
-            logger.warn(`Database initialization failed, retrying... (${retryCount} attempts remaining)`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            // Increase delay for next retry
-            retryDelay *= 2;
-            return initializeDatabaseWithRetry();
-        }
-        logger.error('All database initialization attempts failed:', error);
-        // Continue in offline mode
+        logger.error('Database initialization failed, falling back to offline mode:', lastError);
         isOnline = false;
         supabase = null;
         return false;
+    })();
+
+    try {
+        return await initializationPromise;
+    } finally {
+        initializationInProgress = false;
+        initializationPromise = null;
     }
 }
 
-// Process offline queue
+/**
+ * Process queued offline operations
+ * @returns {Promise<void>}
+ */
 async function processOfflineQueue() {
-    if (!isOnline || !supabase || offlineQueue.length === 0) return;
+    if (!isOnline || offlineQueue.length === 0) return;
 
-    logger.info(`Processing offline queue: ${offlineQueue.length} items`);
-    
+    logger.info(`Processing ${offlineQueue.length} offline operations`);
+
     const failedOperations = [];
     
     for (const operation of offlineQueue) {
         try {
-            switch (operation.type) {
-                case 'create':
-                    await supabase.from(operation.table).insert(operation.data);
+            const { type, data } = operation;
+            
+            switch (type) {
+                case 'saveAssessment':
+                    await saveAssessmentToDatabase(data);
                     break;
-                case 'update':
-                    await supabase.from(operation.table)
-                        .update(operation.data)
-                        .match(operation.conditions);
-                    break;
-                default:
-                    logger.warn('Unknown operation type:', operation.type);
+                // Add other operation types as needed
             }
         } catch (error) {
-            logger.error('Failed to process offline operation:', {
-                operation,
-                error: error.message
-            });
+            logger.error('Failed to process offline operation:', error);
             failedOperations.push(operation);
         }
     }
 
     // Update offline queue with failed operations
     offlineQueue = failedOperations;
-    try {
-        localStorage.setItem(STORAGE_KEYS.OFFLINE_QUEUE, JSON.stringify(offlineQueue));
-    } catch (error) {
-        logger.error('Failed to update offline queue:', error);
-    }
-}
-
-// Add operation to offline queue
-function addToOfflineQueue(operation) {
-    offlineQueue.push(operation);
-    try {
-        localStorage.setItem(STORAGE_KEYS.OFFLINE_QUEUE, JSON.stringify(offlineQueue));
-    } catch (error) {
-        logger.error('Failed to save to offline queue:', error);
+    localStorage.setItem(STORAGE_KEYS.OFFLINE_QUEUE, JSON.stringify(offlineQueue));
+    
+    if (failedOperations.length === 0) {
+        logger.info('All offline operations processed successfully');
+    } else {
+        logger.warn(`${failedOperations.length} operations failed to process`);
     }
 }
 
 /**
- * Clear any existing questions from the database
+ * Save assessment data with offline support
+ * @param {Object} data - Assessment data to save
+ * @returns {Promise<void>}
  */
-async function clearDatabaseQuestions() {
+async function saveAssessment(data) {
     try {
-        if (supabase) {
-            await supabase.from('questions').delete().neq('id', '');
-            logger.info('Cleared questions from database');
+        validateAssessmentData(data);
+        
+        if (isOnline) {
+            await saveAssessmentToDatabase(data);
+        } else {
+            // Queue for later and save locally
+            offlineQueue.push({
+                type: 'saveAssessment',
+                data,
+                timestamp: Date.now()
+            });
+            localStorage.setItem(STORAGE_KEYS.OFFLINE_QUEUE, JSON.stringify(offlineQueue));
+            
+            // Save to local storage
+            const localAssessments = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSESSMENTS) || '[]');
+            localAssessments.push({
+                ...data,
+                id: `local_${Date.now()}`,
+                synced: false
+            });
+            localStorage.setItem(STORAGE_KEYS.ASSESSMENTS, JSON.stringify(localAssessments));
         }
+        
+        logger.info('Assessment saved', { online: isOnline });
     } catch (error) {
-        logger.warn('Failed to clear database questions:', error);
+        logger.error('Failed to save assessment:', error);
+        throw error;
     }
 }
 
 /**
- * Local storage fallback for offline/development use
+ * Save assessment data to database
+ * @param {Object} data - Assessment data to save
+ * @returns {Promise<void>}
  */
-class LocalStorageDB {
-    static getItem(key) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : null;
-        } catch (error) {
-            logger.error('LocalStorage read error:', error);
-            return null;
-        }
-    }
+async function saveAssessmentToDatabase(data) {
+    if (!isOnline) throw new Error('Database is offline');
 
-    static setItem(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            logger.error('LocalStorage write error:', error);
-            return false;
-        }
-    }
+    const { error } = await supabase
+        .from('assessments')
+        .insert([data]);
 
-    static generateId() {
-        return 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
+    if (error) throw error;
+    
+    // Update last sync time
+    lastSyncTime = Date.now();
+    localStorage.setItem(STORAGE_KEYS.LAST_SYNC, lastSyncTime);
 }
 
 /**
- * Error handler for database operations
- * @param {Error} error - The error object
- * @param {string} operation - The name of the operation that failed
- * @throws {Error} Enhanced error with operation context
- */
-const handleDatabaseError = (error, operation) => {
-    console.error(`Database Error during ${operation}:`, error);
-    const errorMessage = error.message || 'Unknown error occurred';
-    const details = error.details ? `: ${error.details}` : '';
-    throw new Error(`Failed to ${operation}${details}. ${errorMessage}`);
-};
-
-/**
- * Validates assessment data before saving
- * @param {Object} data - The data to validate
+ * Validate assessment data
+ * @param {Object} data - Assessment data to validate
  * @throws {Error} If validation fails
  */
-const validateAssessmentData = (data) => {
+function validateAssessmentData(data) {
     if (!data.email || !data.email.includes('@')) {
         throw new Error('Invalid email address');
     }
@@ -279,6 +234,26 @@ const validateAssessmentData = (data) => {
     if (!data.experience) {
         throw new Error('Experience is required');
     }
+}
+
+/**
+ * Get database status
+ * @returns {Object} Database status information
+ */
+function getDatabaseStatus() {
+    return {
+        isOnline,
+        offlineQueueSize: offlineQueue.length,
+        lastSync: lastSyncTime,
+        initialized: !!supabase
+    };
+}
+
+// Export functions
+export {
+    initializeDatabase,
+    saveAssessment,
+    getDatabaseStatus
 };
 
 /**
@@ -352,35 +327,6 @@ async function createNewAssessment(data) {
 }
 
 /**
- * Saves final assessment results
- * @param {string} session_id - The assessment session ID
- * @param {Object} scores - Assessment scores
- * @param {Object} completion_data - Completion metadata
- * @returns {Promise<void>}
- */
-export const saveResults = async (session_id, scores, completion_data) => {
-    try {
-        const { error } = await supabase
-            .from('assessments')
-            .update({
-                verity_score: scores.verity,
-                association_score: scores.association,
-                lived_score: scores.lived,
-                institutional_score: scores.institutional,
-                desire_score: scores.desire,
-                completed_at: new Date().toISOString(),
-                duration_minutes: completion_data.duration_minutes,
-                status: 'completed'
-            })
-            .eq('session_id', session_id);
-
-        if (error) throw error;
-    } catch (error) {
-        handleDatabaseError(error, 'save results');
-    }
-};
-
-/**
  * Retrieves assessment data by session ID
  * @param {string} session_id - The assessment session ID
  * @returns {Promise<Object>} The assessment data
@@ -424,7 +370,7 @@ export const getAllCompletedAssessments = async () => {
  * @param {string} session_id - The assessment session ID
  * @returns {Promise<boolean>} Whether the session is valid
  */
-export const validateSession = async (session_id) => {
+const validateSession = async (session_id) => {
     try {
         const { data, error } = await supabase
             .from('assessments')
@@ -440,7 +386,7 @@ export const validateSession = async (session_id) => {
 };
 
 // Initialize database connection
-await initializeDatabaseWithRetry().catch(error => {
+await initializeDatabase().catch(error => {
     logger.error('All database initialization attempts failed:', error);
     // Continue with offline mode
     isOnline = false;
@@ -451,9 +397,7 @@ await initializeDatabaseWithRetry().catch(error => {
 export {
     supabase,
     createNewAssessment,
-    saveResults,
-    getAssessment,
     validateSession,
     isOnline,
     processOfflineQueue
-}; 
+};

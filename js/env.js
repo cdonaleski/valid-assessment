@@ -1,104 +1,112 @@
-// This file will be generated at build time with the actual environment variables
-(function() {
-    const ENV_DEFAULTS = {
-        VALID_ENV: 'development',
-        SUPABASE_URL: '',
-        SUPABASE_ANON_KEY: '',
-        EMAILJS_SERVICE_ID: '',
-        EMAILJS_TEMPLATE_ID: '',
-        EMAILJS_USER_ID: '',
-        SANDBOX_EMAIL: 'test@example.com'
-    };
+/**
+ * VALID Assessment Tool - Environment Configuration
+ * Centralizes all environment-related configuration and initialization
+ */
 
+import { developmentConfig } from './env.development.js';
+
+// Environment types
+const ENV_TYPES = {
+    DEVELOPMENT: 'development',
+    STAGING: 'staging',
+    PRODUCTION: 'production'
+};
+
+// Environment detection
+const detectEnvironment = () => {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('.local')) {
+        return ENV_TYPES.DEVELOPMENT;
+    }
+    if (hostname.includes('staging') || hostname.includes('test')) {
+        return ENV_TYPES.STAGING;
+    }
+    return ENV_TYPES.PRODUCTION;
+};
+
+// Default configuration
+const DEFAULT_CONFIG = {
+    VALID_ENV: detectEnvironment(),
+    DEBUG: true,
+    LOG_LEVEL: 'debug',
+    SANDBOX_EMAIL: 'test@example.com'
+};
+
+// Required environment variables per environment
+const REQUIRED_ENV_VARS = {
+    [ENV_TYPES.DEVELOPMENT]: ['SUPABASE_URL', 'SUPABASE_ANON_KEY'],
+    [ENV_TYPES.STAGING]: ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'EMAILJS_SERVICE_ID', 'EMAILJS_TEMPLATE_ID', 'EMAILJS_USER_ID'],
+    [ENV_TYPES.PRODUCTION]: ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'EMAILJS_SERVICE_ID', 'EMAILJS_TEMPLATE_ID', 'EMAILJS_USER_ID']
+};
+
+// Initialize environment
+const initializeEnvironment = () => {
     try {
-        // Initialize environment variables with defaults
-        window.__env__ = {
-            ...ENV_DEFAULTS,
-            VALID_ENV: '__VALID_ENV__',
-            SUPABASE_URL: '__SUPABASE_URL__',
-            SUPABASE_ANON_KEY: '__SUPABASE_ANON_KEY__',
-            EMAILJS_SERVICE_ID: '__EMAILJS_SERVICE_ID__',
-            EMAILJS_TEMPLATE_ID: '__EMAILJS_TEMPLATE_ID__',
-            EMAILJS_USER_ID: '__EMAILJS_USER_ID__',
-            SANDBOX_EMAIL: '__SANDBOX_EMAIL__'
-        };
-
-        // Function to validate environment variable
-        const validateEnvVar = (key, value) => {
-            // Check if the value is a placeholder
-            if (value === `__${key}__`) {
-                // For development environment, use defaults for non-critical vars
-                if (window.__env__.VALID_ENV === 'development' && !['SUPABASE_URL', 'SUPABASE_ANON_KEY'].includes(key)) {
-                    return ENV_DEFAULTS[key];
-                }
-                throw new Error(`Environment variable not set: ${key}`);
-            }
-            return value;
-        };
-
-        // Validate and clean environment variables
-        const cleanEnv = {
-            VALID_ENV: validateEnvVar('VALID_ENV', window.__env__.VALID_ENV) || 'development',
-            SUPABASE_URL: validateEnvVar('SUPABASE_URL', window.__env__.SUPABASE_URL),
-            SUPABASE_ANON_KEY: validateEnvVar('SUPABASE_ANON_KEY', window.__env__.SUPABASE_ANON_KEY),
-            EMAILJS_SERVICE_ID: validateEnvVar('EMAILJS_SERVICE_ID', window.__env__.EMAILJS_SERVICE_ID),
-            EMAILJS_TEMPLATE_ID: validateEnvVar('EMAILJS_TEMPLATE_ID', window.__env__.EMAILJS_TEMPLATE_ID),
-            EMAILJS_USER_ID: validateEnvVar('EMAILJS_USER_ID', window.__env__.EMAILJS_USER_ID),
-            SANDBOX_EMAIL: validateEnvVar('SANDBOX_EMAIL', window.__env__.SANDBOX_EMAIL)
-        };
-
-        // Update window.__env__ with validated values
-        window.__env__ = cleanEnv;
-
-        // Log initialization status
-        const envStatus = {
-            env: window.__env__.VALID_ENV,
-            hasSupabaseUrl: !!window.__env__.SUPABASE_URL,
-            hasSupabaseKey: !!window.__env__.SUPABASE_ANON_KEY,
-            timestamp: new Date().toISOString()
-        };
-
-        console.log('Environment variables loaded:', envStatus);
-
-        // Add environment status to window for debugging
-        window.__env_status__ = envStatus;
-    } catch (error) {
-        console.error('Failed to initialize environment variables:', error);
+        const env = detectEnvironment();
         
-        // Set detailed error information
-        window.__env_error__ = {
-            message: error.message,
-            timestamp: new Date().toISOString(),
-            details: {
-                hasSupabaseUrl: !!window.__env__?.SUPABASE_URL,
-                hasSupabaseKey: !!window.__env__?.SUPABASE_ANON_KEY,
-                env: window.__env__?.VALID_ENV || 'unknown'
-            },
-            error: error.stack
+        // Use development config in development, otherwise use window.__env__
+        const envVars = env === ENV_TYPES.DEVELOPMENT 
+            ? developmentConfig 
+            : (window.__env__ || {});
+        
+        // Merge with defaults
+        window.__env__ = {
+            ...DEFAULT_CONFIG,
+            ...envVars
         };
 
-        // In development, provide more context
-        if (window.__env__?.VALID_ENV === 'development') {
-            console.warn('Development environment detected. Using fallback values where possible.');
-            window.__env__ = {
-                ...ENV_DEFAULTS,
-                VALID_ENV: 'development'
+        // Validate required variables
+        const required = REQUIRED_ENV_VARS[env];
+        const missing = required.filter(key => !window.__env__[key]);
+        
+        if (missing.length > 0) {
+            console.warn(`Missing required environment variables for ${env}:`, missing);
+            window.__env_status__ = {
+                isInitialized: true,
+                hasError: true,
+                error: `Missing required variables: ${missing.join(', ')}`,
+                environment: env
             };
         } else {
-            // In production, clear sensitive data
-            window.__env__ = null;
+            window.__env_status__ = {
+                isInitialized: true,
+                hasError: false,
+                environment: env
+            };
         }
-    }
 
-    // Export environment check function
-    window.checkEnvironment = function() {
-        return {
-            isInitialized: !!window.__env__,
-            hasError: !!window.__env_error__,
-            error: window.__env_error__,
-            status: window.__env_status__,
-            environment: window.__env__?.VALID_ENV,
-            hasSupabaseConfig: !!(window.__env__?.SUPABASE_URL && window.__env__?.SUPABASE_ANON_KEY)
+        // Log initialization status
+        console.log('Environment initialized:', {
+            environment: env,
+            debug: window.__env__.DEBUG,
+            hasSupabaseConfig: !!(window.__env__.SUPABASE_URL && window.__env__.SUPABASE_ANON_KEY)
+        });
+
+    } catch (error) {
+        console.error('Failed to initialize environment:', error);
+        window.__env_status__ = {
+            isInitialized: false,
+            hasError: true,
+            error: error.message,
+            environment: 'unknown'
         };
+    }
+};
+
+// Environment status check
+const checkEnvironment = () => {
+    return window.__env_status__ || {
+        isInitialized: false,
+        hasError: true,
+        error: 'Environment not initialized',
+        environment: 'unknown'
     };
-})(); 
+};
+
+// Initialize on load
+initializeEnvironment();
+
+// Exports
+export const ENV = ENV_TYPES;
+export { checkEnvironment };
+export default window.__env__ || DEFAULT_CONFIG; 

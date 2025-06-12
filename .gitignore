@@ -1,25 +1,24 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
 # Environment variables
 .env
 .env.local
-.env.*.local
-.env.rtf
-.vercel
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Credentials
-credentials/
-*.key
-*.pem
-*.crt
+# Build outputs
+dist/
+build/
+.vercel/
 
-# Dependencies
-node_modules/
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Build output
-dist/
-build/
 
 # IDE and editor files
 .idea/
@@ -28,6 +27,15 @@ build/
 *.swo
 .DS_Store
 
+# Supabase
+.supabase/
+
+# Credentials
+credentials/
+*.key
+*.pem
+*.crt
+
 # Test coverage
 coverage/
 
@@ -35,10 +43,7 @@ coverage/
 logs/
 *.log
 
-# Supabase
-.supabase/
-supabase/.temp/
-
 # Local development
 *.local
 local/ 
+.env*.local

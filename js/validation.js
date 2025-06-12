@@ -3,151 +3,128 @@
  * Handles input validation and data sanitization
  */
 
-import { logger } from './test-utils.js';
+import { logger } from './logger.js';
 
-// Email validation regex
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+// Regular expressions for validation
+const VALIDATION_PATTERNS = {
+    email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    name: /^[a-zA-Z\s-']{2,50}$/,
+    department: /^[a-zA-Z0-9\s-&]{2,50}$/,
+    role: /^[a-zA-Z0-9\s-&]{2,50}$/,
+    experience: /^[0-9]{1,2}$/
+};
 
-// Input sanitization
+// Sanitize user input
 function sanitizeInput(input) {
     if (typeof input !== 'string') return input;
     return input
         .trim()
         .replace(/[<>]/g, '') // Remove potential HTML tags
-        .slice(0, 500); // Limit length
+        .replace(/['"]/g, '') // Remove quotes
+        .replace(/[;]/g, ''); // Remove semicolons
+}
+
+// Validate email format
+function validateEmail(email) {
+    if (!email || typeof email !== 'string') return false;
+    return VALIDATION_PATTERNS.email.test(email);
 }
 
 // Validate demographics data
-export function validateDemographics(data) {
-    const errors = [];
+function validateDemographics(demographics) {
+    if (!demographics || typeof demographics !== 'object') {
+        throw new Error('Invalid demographics format');
+    }
 
-    // Required fields
-    const required = ['department', 'role', 'experience', 'email'];
-    required.forEach(field => {
-        if (!data[field] || !data[field].trim()) {
-            errors.push(`${field} is required`);
+    const requiredFields = ['department', 'role', 'experience'];
+    for (const field of requiredFields) {
+        if (!demographics[field] || typeof demographics[field] !== 'string' || !demographics[field].trim()) {
+            throw new Error(`Missing or invalid ${field} in demographics`);
         }
-    });
-
-    // Email format validation
-    if (data.email && !EMAIL_REGEX.test(data.email)) {
-        errors.push('Invalid email format');
     }
 
-    // Log validation results
-    if (errors.length > 0) {
-        logger.warn('Validation', 'Demographics validation failed', { errors });
+    // Validate department is one of the allowed values
+    const validDepartments = ['Executive', 'Finance', 'HR', 'IT', 'Marketing', 'Operations', 'Sales', 'Other'];
+    if (!validDepartments.includes(demographics.department)) {
+        throw new Error('Invalid department value');
     }
 
-    return {
-        isValid: errors.length === 0,
-        errors,
-        sanitized: Object.fromEntries(
-            Object.entries(data).map(([key, value]) => [
-                key,
-                typeof value === 'string' ? sanitizeInput(value) : value
-            ])
-        )
-    };
+    // Validate role is one of the allowed values
+    const validRoles = ['Individual Contributor', 'Team Lead', 'Manager', 'Director', 'VP/C-Suite', 'Owner/Founder'];
+    if (!validRoles.includes(demographics.role)) {
+        throw new Error('Invalid role value');
+    }
+
+    // Validate experience is one of the allowed values
+    const validExperience = ['0-2', '3-5', '6-10', '11-15', '15+'];
+    if (!validExperience.includes(demographics.experience)) {
+        throw new Error('Invalid experience value');
+    }
+
+    return true;
 }
 
 // Validate assessment answers
-export function validateAnswers(answers, questionCount) {
-    const errors = [];
-
-    // Check if we have all answers
-    if (answers.length !== questionCount) {
-        errors.push(`Expected ${questionCount} answers, got ${answers.length}`);
+function validateAnswer(questionId, value) {
+    if (!questionId || typeof questionId !== 'string') {
+        throw new Error('Invalid question ID');
     }
 
-    // Check each answer is valid
-    answers.forEach((answer, index) => {
-        if (typeof answer !== 'number' || answer < 1 || answer > 5) {
-            errors.push(`Invalid answer for question ${index + 1}`);
-        }
-    });
-
-    // Log validation results
-    if (errors.length > 0) {
-        logger.warn('Validation', 'Answer validation failed', { errors });
+    if (typeof value !== 'number' || value < 1 || value > 7) {
+        throw new Error('Invalid answer value: must be between 1 and 7');
     }
 
-    return {
-        isValid: errors.length === 0,
-        errors
-    };
+    return true;
 }
 
-// Validate email address
-export function validateEmail(email) {
-    return EMAIL_REGEX.test(email);
-}
+// Validate assessment data
+function validateAssessmentData(data) {
+    if (!data || typeof data !== 'object') {
+        throw new Error('Invalid assessment data format');
+    }
 
-// Validate score calculations
-export function validateScores(scores) {
-    const errors = [];
+    const { id, email, demographics, answers } = data;
 
-    // Check all VALID dimensions
-    ['V', 'A', 'L', 'I', 'D'].forEach(dim => {
-        if (typeof scores[dim] !== 'number' || 
-            scores[dim] < 0 || 
-            scores[dim] > 100) {
-            errors.push(`Invalid score for dimension ${dim}`);
+    if (!id || typeof id !== 'string') {
+        throw new Error('Invalid assessment ID');
+    }
+
+    if (!validateEmail(email)) {
+        throw new Error('Invalid email format');
+    }
+
+    if (demographics) {
+        validateDemographics(demographics);
+    }
+
+    if (answers) {
+        if (typeof answers !== 'object') {
+            throw new Error('Invalid answers format');
         }
-    });
 
-    // Check total is valid
-    const total = Object.values(scores).reduce((sum, score) => sum + score, 0);
-    if (total === 0) {
-        errors.push('All scores cannot be zero');
+        Object.entries(answers).forEach(([questionId, value]) => {
+            validateAnswer(questionId, value);
+        });
     }
 
-    // Log validation results
-    if (errors.length > 0) {
-        logger.warn('Validation', 'Score validation failed', { errors });
-    }
-
-    return {
-        isValid: errors.length === 0,
-        errors
-    };
-}
-
-// Validate persona assignment
-export function validatePersona(persona) {
-    const required = ['name', 'description', 'validationPattern'];
-    const errors = [];
-
-    required.forEach(field => {
-        if (!persona[field]) {
-            errors.push(`Missing required persona field: ${field}`);
-        }
-    });
-
-    // Log validation results
-    if (errors.length > 0) {
-        logger.warn('Validation', 'Persona validation failed', { errors });
-    }
-
-    return {
-        isValid: errors.length === 0,
-        errors
-    };
+    return true;
 }
 
 // Sanitize data for database
-export function sanitizeForDatabase(data) {
-    // Recursively sanitize objects
+function sanitizeForDatabase(data) {
+    if (Array.isArray(data)) {
+        return data.map(item => sanitizeForDatabase(item));
+    }
+
     if (typeof data === 'object' && data !== null) {
         return Object.fromEntries(
             Object.entries(data).map(([key, value]) => [
-                key,
+                sanitizeInput(key),
                 sanitizeForDatabase(value)
             ])
         );
     }
 
-    // Sanitize strings
     if (typeof data === 'string') {
         return sanitizeInput(data);
     }
@@ -155,36 +132,38 @@ export function sanitizeForDatabase(data) {
     return data;
 }
 
-// Validate file type and size for exports
-export function validateFileExport(fileType, size) {
-    const errors = [];
+// Validate resume token
+function validateResumeToken(token) {
+    if (!token || typeof token !== 'string') {
+        throw new Error('Invalid resume token format');
+    }
+
+    // Token format: timestamp-hash
+    const [timestamp, hash] = token.split('-');
     
-    // Check file type
-    const allowedTypes = ['csv', 'pdf', 'json'];
-    if (!allowedTypes.includes(fileType)) {
-        errors.push(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`);
+    if (!timestamp || !hash) {
+        throw new Error('Invalid resume token structure');
     }
 
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (size > maxSize) {
-        errors.push('File size exceeds maximum allowed (10MB)');
+    // Validate timestamp part (base36 number)
+    if (!/^[0-9a-z]+$/i.test(timestamp)) {
+        throw new Error('Invalid resume token timestamp');
     }
 
-    return {
-        isValid: errors.length === 0,
-        errors
-    };
+    // Validate hash part (12 characters, alphanumeric)
+    if (!/^[0-9a-zA-Z]{12}$/.test(hash)) {
+        throw new Error('Invalid resume token hash');
+    }
+
+    return true;
 }
 
-// Export validation utilities
-export const validation = {
-    validateDemographics,
-    validateAnswers,
+export {
     validateEmail,
-    validateScores,
-    validatePersona,
-    validateFileExport,
+    validateDemographics,
+    validateAnswer,
+    validateAssessmentData,
+    validateResumeToken,
     sanitizeInput,
     sanitizeForDatabase
 }; 

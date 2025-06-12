@@ -51,40 +51,56 @@ const PDF_CONFIG = {
 
 /**
  * Generate complete PDF report
- * @param {Object} persona - Persona data
- * @param {Object} scores - VALID dimension scores
- * @param {Object} demographics - User demographic data
+ * @param {Object} results - Assessment results including scores and persona
  * @returns {Promise<Blob>} PDF document as blob
  */
-export async function generatePDF(persona, scores, demographics) {
-    const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-    });
+export async function generatePDF(results) {
+    try {
+        console.log('Starting PDF generation with results:', results);
+        
+        // Initialize jsPDF
+        if (!window.jspdf) {
+            console.error('jsPDF not loaded');
+            throw new Error('PDF generation library not loaded');
+        }
+        
+        const { jsPDF } = window.jspdf;
+        console.log('jsPDF initialized');
+        
+        // Create new PDF document
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
 
-    // Page 1: Executive Summary
-    await generateExecutiveSummary(doc, persona, scores, demographics);
-    doc.addPage();
+        // Page 1: Executive Summary
+        await generateExecutiveSummary(doc, results);
+        doc.addPage();
 
-    // Page 2: Detailed Insights
-    await generateDetailedInsights(doc, persona, scores);
-    doc.addPage();
+        // Page 2: Detailed Insights
+        await generateDetailedInsights(doc, results);
+        doc.addPage();
 
-    // Page 3: Development Plan
-    await generateDevelopmentPlan(doc, persona, scores);
+        // Page 3: Development Plan
+        await generateDevelopmentPlan(doc, results);
 
-    return doc.output('blob');
+        // Save and download the PDF
+        const filename = `VALID-Assessment-Results-${new Date().toISOString().split('T')[0]}.pdf`;
+        console.log('Saving PDF as:', filename);
+        doc.save(filename);
+    } catch (error) {
+        console.error('Error in PDF generation:', error);
+        throw error;
+    }
 }
 
 /**
  * Generate executive summary page
  * @param {Object} doc - jsPDF document
- * @param {Object} persona - Persona data
- * @param {Object} scores - VALID scores
- * @param {Object} demographics - User demographics
+ * @param {Object} results - Assessment results
  */
-async function generateExecutiveSummary(doc, persona, scores, demographics) {
+async function generateExecutiveSummary(doc, results) {
     const { pageWidth, margins } = PDF_CONFIG;
     const contentWidth = pageWidth - margins.left - margins.right;
 
@@ -94,42 +110,66 @@ async function generateExecutiveSummary(doc, persona, scores, demographics) {
     doc.setTextColor(...PDF_CONFIG.colors.primary);
     doc.text('VALID Assessment Results', margins.left, margins.top + 10);
 
-    // Persona Name & Date
+    // Date
     doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
     doc.setFontSize(PDF_CONFIG.fonts.subheader.size);
     doc.setTextColor(...PDF_CONFIG.colors.secondary);
-    doc.text(persona.name, margins.left, margins.top + 25);
     doc.text(new Date().toLocaleDateString(), pageWidth - margins.right, margins.top + 25, { align: 'right' });
 
-    // Description
+    // Scores Summary
     doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
     doc.setFontSize(PDF_CONFIG.fonts.body.size);
     doc.setTextColor(...PDF_CONFIG.colors.text);
-    
-    const description = formatPersonalizedContent(persona, scores);
-    const splitDesc = doc.splitTextToSize(description, contentWidth);
-    doc.text(splitDesc, margins.left, margins.top + 40);
 
-    // Primary Strength Box
-    drawStrengthBox(doc, persona, margins.left, margins.top + 80, contentWidth);
+    let yPos = margins.top + 40;
+    const dimensions = {
+        V: 'Verity (Data-Driven)',
+        A: 'Association (Relationship)',
+        L: 'Lived Experience',
+        I: 'Institutional Knowledge',
+        D: 'Desire (Future-Focused)'
+    };
 
-    // Skills Development Message
+    Object.entries(dimensions).forEach(([key, label]) => {
+        const score = results.scores[key];
+        doc.text(`${label}: ${score}%`, margins.left, yPos);
+        yPos += 10;
+    });
+
+    // Primary Style
+    yPos += 10;
     doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
-    doc.text('Skills You Can Develop', margins.left, margins.top + 140);
+    doc.text('Your Primary Style', margins.left, yPos);
     
-    const growthMessage = "Your VALID assessment results reflect your current preferences and approaches - not fixed traits. These are skills you can develop and adapt as you grow professionally.";
-    const splitGrowth = doc.splitTextToSize(growthMessage, contentWidth);
+    yPos += 10;
     doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
-    doc.text(splitGrowth, margins.left, margins.top + 155);
+    const primaryStyle = `${results.persona.primary} (${Math.max(...Object.values(results.scores))}%)`;
+    doc.text(primaryStyle, margins.left, yPos);
+
+    // Add chart
+    try {
+        const chartImage = await createChartImage(results.scores);
+        const imgWidth = 150;
+        const imgHeight = 150;
+        doc.addImage(
+            chartImage,
+            'PNG',
+            (pageWidth - imgWidth) / 2,
+            yPos + 10,
+            imgWidth,
+            imgHeight
+        );
+    } catch (error) {
+        console.error('Failed to add chart to PDF:', error);
+    }
 }
 
 /**
  * Generate detailed insights page
  * @param {Object} doc - jsPDF document
- * @param {Object} persona - Persona data
- * @param {Object} scores - VALID scores
+ * @param {Object} results - Assessment results
  */
-async function generateDetailedInsights(doc, persona, scores) {
+async function generateDetailedInsights(doc, results) {
     const { pageWidth, margins } = PDF_CONFIG;
     const contentWidth = pageWidth - margins.left - margins.right;
 
@@ -137,44 +177,42 @@ async function generateDetailedInsights(doc, persona, scores) {
     doc.setFont(PDF_CONFIG.fonts.header.name, PDF_CONFIG.fonts.header.style);
     doc.setFontSize(PDF_CONFIG.fonts.header.size);
     doc.setTextColor(...PDF_CONFIG.colors.primary);
-    doc.text('Your VALID Profile', margins.left, margins.top + 10);
+    doc.text('Detailed Insights', margins.left, margins.top + 10);
 
-    // Radar Chart
-    const chartImage = await createChartImage(scores);
-    doc.addImage(
-        chartImage,
-        'PNG',
-        margins.left,
-        margins.top + 20,
-        contentWidth,
-        contentWidth * 0.75
-    );
-
-    // Scenarios Section
-    doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
-    doc.setFontSize(PDF_CONFIG.fonts.subheader.size);
-    doc.setTextColor(...PDF_CONFIG.colors.secondary);
-    doc.text('When Your Style Excels', margins.left, margins.top + 140);
-
-    // Scenarios Content
+    // Description
     doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
     doc.setFontSize(PDF_CONFIG.fonts.body.size);
     doc.setTextColor(...PDF_CONFIG.colors.text);
 
-    let yPos = margins.top + 155;
-    persona.idealEnvironments.forEach(scenario => {
-        doc.text(`• ${scenario}`, margins.left + 5, yPos);
+    let yPos = margins.top + 30;
+    
+    if (results.persona.description) {
+        const description = doc.splitTextToSize(results.persona.description, contentWidth);
+        doc.text(description, margins.left, yPos);
+        yPos += (description.length * 7) + 10;
+    }
+
+    // Secondary Style
+    if (results.persona.secondary) {
+        doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
+        doc.text('Secondary Style', margins.left, yPos);
         yPos += 10;
-    });
+
+        doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
+        const secondaryText = doc.splitTextToSize(
+            `Your secondary style is ${results.persona.secondary}. This indicates flexibility in your decision-making approach.`,
+            contentWidth
+        );
+        doc.text(secondaryText, margins.left, yPos);
+    }
 }
 
 /**
  * Generate development plan page
  * @param {Object} doc - jsPDF document
- * @param {Object} persona - Persona data
- * @param {Object} scores - VALID scores
+ * @param {Object} results - Assessment results
  */
-async function generateDevelopmentPlan(doc, persona, scores) {
+async function generateDevelopmentPlan(doc, results) {
     const { pageWidth, margins } = PDF_CONFIG;
     const contentWidth = pageWidth - margins.left - margins.right;
 
@@ -182,35 +220,24 @@ async function generateDevelopmentPlan(doc, persona, scores) {
     doc.setFont(PDF_CONFIG.fonts.header.name, PDF_CONFIG.fonts.header.style);
     doc.setFontSize(PDF_CONFIG.fonts.header.size);
     doc.setTextColor(...PDF_CONFIG.colors.primary);
-    doc.text('30-Day Development Plan', margins.left, margins.top + 10);
+    doc.text('Development Opportunities', margins.left, margins.top + 10);
 
-    // Focus Area
-    doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
-    doc.setFontSize(PDF_CONFIG.fonts.subheader.size);
-    doc.setTextColor(...PDF_CONFIG.colors.secondary);
-    doc.text('Focus Area', margins.left, margins.top + 30);
+    let yPos = margins.top + 30;
 
-    doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
-    doc.setFontSize(PDF_CONFIG.fonts.body.size);
-    doc.setTextColor(...PDF_CONFIG.colors.text);
-    
-    const focusArea = persona.developmentTips[0];
-    const splitFocus = doc.splitTextToSize(focusArea, contentWidth);
-    doc.text(splitFocus, margins.left, margins.top + 45);
+    // Development Areas
+    if (results.development) {
+        doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
+        doc.setFontSize(PDF_CONFIG.fonts.subheader.size);
+        doc.setTextColor(...PDF_CONFIG.colors.secondary);
+        doc.text(results.development.area, margins.left, yPos);
+        yPos += 10;
 
-    // Action Steps
-    doc.setFont(PDF_CONFIG.fonts.subheader.name, PDF_CONFIG.fonts.subheader.style);
-    doc.text('Action Steps', margins.left, margins.top + 70);
-
-    let yPos = margins.top + 85;
-    generateActionSteps(persona).forEach((step, index) => {
-        doc.setFont(PDF_CONFIG.fonts.body.name, 'bold');
-        doc.text(`${index + 1}. ${step.timeframe}`, margins.left, yPos);
-        doc.setFont(PDF_CONFIG.fonts.body.name, 'normal');
-        const splitStep = doc.splitTextToSize(step.action, contentWidth - 10);
-        doc.text(splitStep, margins.left + 10, yPos + 10);
-        yPos += 25;
-    });
+        doc.setFont(PDF_CONFIG.fonts.body.name, PDF_CONFIG.fonts.body.style);
+        doc.setFontSize(PDF_CONFIG.fonts.body.size);
+        doc.setTextColor(...PDF_CONFIG.colors.text);
+        const description = doc.splitTextToSize(results.development.description, contentWidth);
+        doc.text(description, margins.left, yPos);
+    }
 }
 
 /**
@@ -219,45 +246,72 @@ async function generateDevelopmentPlan(doc, persona, scores) {
  * @returns {Promise<string>} Base64 encoded image
  */
 async function createChartImage(scores) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 600;
-    
-    const chart = new Chart(canvas.getContext('2d'), {
-        type: 'radar',
-        data: {
-            labels: ['Verity', 'Association', 'Lived Experience', 'Institutional', 'Desire'],
-            datasets: [{
-                label: 'Your VALID Profile',
-                data: [scores.V, scores.A, scores.L, scores.I, scores.D],
-                backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                borderColor: 'rgba(52, 152, 219, 1)',
-                pointBackgroundColor: 'rgba(52, 152, 219, 1)',
-                pointBorderColor: '#fff'
-            }]
-        },
-        options: {
-            scales: {
-                r: {
-                    suggestedMin: 0,
-                    suggestedMax: 100
-                }
+    try {
+        console.log('Creating chart image with scores:', scores);
+        
+        // Create a temporary canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        document.body.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Failed to get canvas context');
+        }
+
+        // Create chart
+        const chart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Verity', 'Association', 'Lived Experience', 'Institutional', 'Desire'],
+                datasets: [{
+                    label: 'Your VALID Profile',
+                    data: [scores.V || 0, scores.A || 0, scores.L || 0, scores.I || 0, scores.D || 0],
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+                    pointBorderColor: '#fff',
+                    pointRadius: 4
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
             }
-        }
-    });
+        });
 
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const image = canvas.toDataURL('image/png');
-            chart.destroy();
-            resolve(image);
-        }, 100);
-    });
+        // Wait for chart animation
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Get image data
+        const imageData = canvas.toDataURL('image/png');
+        
+        // Cleanup
+        chart.destroy();
+        document.body.removeChild(canvas);
+        
+        console.log('Chart image created successfully');
+        return imageData;
+    } catch (error) {
+        console.error('Error creating chart image:', error);
+        throw error;
+    }
 }
 
 /**

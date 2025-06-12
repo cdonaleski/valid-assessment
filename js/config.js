@@ -84,7 +84,7 @@ const features = {
     enableAnalytics: CURRENT_ENV !== ENV.DEVELOPMENT,
     enablePDFExport: true,
     enableEmailNotifications: CURRENT_ENV !== ENV.DEVELOPMENT,
-    enableDebugPanel: CURRENT_ENV === ENV.DEVELOPMENT,
+    enableDebugPanel: true,
     enableOfflineMode: true,
     enableAutoSave: true
 };

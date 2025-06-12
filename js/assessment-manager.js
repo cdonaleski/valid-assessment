@@ -6,220 +6,153 @@
 import { logger } from './logger.js';
 import validAssessmentData from './questions-data.js';
 import stateManager from './state-manager.js';
-import { supabase, isOnline } from './database.js';
+import database from "./database-clean.js";
+import sessionManager from './session-manager.js';
+const { supabase, isOnline } = database;
 import { calculateScores, validateAnswer } from './scoring.js';
-
-// Debug log the raw imported data
-logger.debug('Raw imported validAssessmentData:', {
-    hasData: !!validAssessmentData,
-    isObject: typeof validAssessmentData === 'object',
-    hasQuestions: !!validAssessmentData?.questions,
-    questionsIsArray: Array.isArray(validAssessmentData?.questions),
-    questionCount: validAssessmentData?.questions?.length,
-    firstQuestion: validAssessmentData?.questions?.[0],
-    lastQuestion: validAssessmentData?.questions?.[validAssessmentData?.questions?.length - 1]
-});
-
-// Validate the imported questions data
-try {
-    if (!validAssessmentData) {
-        throw new Error('validAssessmentData module failed to load');
-    }
-
-    if (!validAssessmentData.questions || !Array.isArray(validAssessmentData.questions)) {
-        throw new Error('Invalid questions array in validAssessmentData');
-    }
-
-    const attentionChecks = validAssessmentData.questions.filter(q => q.dimension === 'attention_check');
-    logger.info('Validated questions data on import:', {
-        totalQuestions: validAssessmentData.questions.length,
-        attentionChecks: attentionChecks.map(q => ({ id: q.id, correctAnswer: q.correctAnswer }))
-    });
-} catch (error) {
-    logger.error('Error validating questions data:', error);
-    throw error;
-}
 
 class AssessmentManager {
     constructor() {
-        this.isOffline = false;
+        // Storage keys
+        this.STORAGE_KEYS = {
+            PROGRESS: 'valid_assessment_progress',
+            CURRENT: 'valid_current_assessment',
+            STATE: 'validAssessmentState',
+            DATA: 'validAssessmentData',
+            COMPLETED: 'valid_completed_assessments',
+            SYNC_QUEUE: 'valid_sync_queue'
+        };
+        this.OPERATION_TIMEOUT = 10000; // 10 seconds
         this.questions = [];
-        this.initialized = false;
-        this.startTime = null;
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', this.handleSessionEnd.bind(this));
+    }
 
-        // Clear any cached questions to ensure we use the latest version
+    handleSessionEnd(event) {
         try {
-            localStorage.removeItem('valid_questions');
-            localStorage.removeItem('valid_current_assessment');
-            logger.info('Cleared question cache on startup');
+            const state = stateManager.getState();
+            if (state && state.isInitialized) {
+                localStorage.setItem(this.STORAGE_KEYS.STATE, JSON.stringify(state));
+            }
         } catch (error) {
-            logger.warn('Failed to clear question cache:', error);
+            logger.error('Failed to save state on unload:', error);
         }
+    }
 
-        // Debug log the validAssessmentData in constructor
-        logger.debug('AssessmentManager constructor - validAssessmentData:', {
-            hasData: !!validAssessmentData,
-            questionCount: validAssessmentData?.questions?.length,
-            attentionChecks: validAssessmentData?.questions?.filter(q => q.dimension === 'attention_check')?.length
+    async loadQuestions() {
+        try {
+            const response = await fetch('./data/questions.json');
+            if (!response.ok) {
+                throw new Error('Failed to load questions');
+            }
+            this.questions = await response.json();
+            return this.questions;
+        } catch (error) {
+            logger.error('Failed to load questions:', error);
+            throw error;
+        }
+    }
+
+    generateToken(email) {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 8);
+        return `${timestamp}-${random}-${email.split('@')[0]}`.toUpperCase();
+    }
+
+    async saveProgress(state) {
+        try {
+            if (!state || !state.demographics?.email) {
+                throw new Error('Invalid state or missing email');
+            }
+
+            const token = this.generateToken(state.demographics.email);
+            const progress = {
+                token,
+                email: state.demographics.email,
+                timestamp: Date.now(),
+                expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+                state: {
+                    currentQuestion: state.currentQuestion || 0,
+                    answers: state.answers || [],
+                    demographics: state.demographics,
+                    startTime: state.startTime
+                }
+            };
+
+            // Get existing progress data
+            const existingData = JSON.parse(localStorage.getItem(this.STORAGE_KEYS.PROGRESS) || '{}');
+            
+            // Add new progress
+            existingData[token] = progress;
+            
+            // Save back to storage
+            localStorage.setItem(this.STORAGE_KEYS.PROGRESS, JSON.stringify(existingData));
+            
+            logger.info('Progress saved successfully', { token });
+            return token;
+        } catch (error) {
+            logger.error('Failed to save progress:', error);
+            throw error;
+        }
+    }
+
+    async loadProgress(token, email) {
+        return this.executeWithTimeout(async () => {
+            try {
+                // Validate inputs
+                if (!token || !email) {
+                    throw new Error('Token and email are required');
+                }
+
+                logger.debug('Loading progress with token:', { token, email });
+
+                // Get all saved progress
+                const savedData = JSON.parse(localStorage.getItem(this.STORAGE_KEYS.PROGRESS) || '{}');
+                
+                // Find matching progress
+                const progress = savedData[token];
+                
+                if (!progress) {
+                    throw new Error('No saved progress found for this token');
+                }
+
+                if (progress.email.toLowerCase() !== email.toLowerCase()) {
+                    throw new Error('Email does not match the one used to save progress');
+                }
+
+                if (progress.expiresAt < Date.now()) {
+                    throw new Error('This resume token has expired');
+                }
+
+                // Load questions if needed
+                if (!this.questions.length) {
+                    await this.loadQuestions();
+                }
+
+                // Return state in the expected format
+                return {
+                    ...progress.state,
+                    questions: this.questions,
+                    token,
+                    isInitialized: true,
+                    isRestored: true,
+                    status: 'in_progress'
+                };
+            } catch (error) {
+                logger.error('Failed to load progress:', error);
+                throw error;
+            }
         });
     }
 
-    /**
-     * Load and randomize questions from the validAssessmentData module
-     */
-    async loadQuestions() {
+    async resumeAssessment(token, email) {
         try {
-            logger.debug('Starting loadQuestions...');
-            
-            // Debug log the validAssessmentData state
-            logger.debug('validAssessmentData state in loadQuestions:', {
-                hasData: !!validAssessmentData,
-                isObject: typeof validAssessmentData === 'object',
-                hasQuestions: !!validAssessmentData?.questions,
-                questionsIsArray: Array.isArray(validAssessmentData?.questions),
-                questionCount: validAssessmentData?.questions?.length
-            });
-            
-            // Validate questions data
-            if (!validAssessmentData?.questions?.length) {
-                logger.error('Invalid or empty questions data:', { validAssessmentData });
-                throw new Error('Questions data is invalid or empty');
-            }
-
-            // Log all questions with attention_check dimension
-            const allQuestions = validAssessmentData.questions;
-            logger.debug('All questions with dimensions:', allQuestions.map(q => ({
-                id: q.id,
-                dimension: q.dimension,
-                category: q.category
-            })));
-
-            // Get attention check questions with detailed logging
-            const attentionChecks = allQuestions.filter(q => {
-                const isAttentionCheck = q.dimension === 'attention_check';
-                logger.debug('Question check:', {
-                    id: q.id,
-                    dimension: q.dimension,
-                    isAttentionCheck,
-                    dimensionType: typeof q.dimension
-                });
-                return isAttentionCheck;
-            });
-
-            logger.debug('Attention check filtering results:', {
-                totalQuestions: allQuestions.length,
-                attentionChecks: attentionChecks.map(q => ({
-                    id: q.id,
-                    dimension: q.dimension,
-                    correctAnswer: q.correctAnswer
-                }))
-            });
-
-            // Separate core questions from quality checks
-            const coreQuestions = allQuestions.filter(q => 
-                !q.dimension.includes('social_desirability') && !q.dimension.includes('attention_check')
-            );
-            const qualityQuestions = allQuestions.filter(q => 
-                q.dimension.includes('social_desirability') || q.dimension.includes('attention_check')
-            );
-
-            // Log question categorization results
-            logger.debug('Question categorization:', {
-                total: allQuestions.length,
-                core: coreQuestions.length,
-                quality: qualityQuestions.length,
-                attentionChecks: attentionChecks.length
-            });
-
-            // Validate we have enough core questions
-            if (coreQuestions.length < 10) {
-                logger.error('Insufficient core questions:', { count: coreQuestions.length });
-                throw new Error('Insufficient number of core questions');
-            }
-
-            // Randomize core questions
-            const randomizedCore = [...coreQuestions].sort(() => Math.random() - 0.5);
-
-            // Get and validate attention check questions
-            const attentionCheck1 = attentionChecks.find(q => q.id === 'AC-01');
-            const attentionCheck2 = attentionChecks.find(q => q.id === 'AC-02');
-
-            if (!attentionCheck1 || !attentionCheck2) {
-                logger.error('Missing attention check questions:', {
-                    totalAttentionChecks: attentionChecks.length,
-                    hasAC1: !!attentionCheck1,
-                    hasAC2: !!attentionCheck2,
-                    availableIds: attentionChecks.map(q => q.id)
-                });
-                throw new Error('Required attention check questions not found');
-            }
-
-            // Validate attention check questions have correct properties
-            [attentionCheck1, attentionCheck2].forEach(q => {
-                if (!q.correctAnswer || typeof q.correctAnswer !== 'number') {
-                    logger.error('Invalid attention check question:', { question: q });
-                    throw new Error(`Invalid attention check question: ${q.id}`);
-                }
-            });
-
-            // Calculate positions for attention checks (30% and 70% through the assessment)
-            const attentionCheck1Position = Math.floor(randomizedCore.length * 0.3);
-            const attentionCheck2Position = Math.floor(randomizedCore.length * 0.7);
-
-            // Insert attention checks
-            randomizedCore.splice(attentionCheck1Position, 0, attentionCheck1);
-            randomizedCore.splice(attentionCheck2Position, 0, attentionCheck2);
-
-            // Get and validate social desirability questions
-            const sdQuestions = validAssessmentData.questions.filter(q => q.dimension === 'social_desirability');
-            if (sdQuestions.length === 0) {
-                logger.error('No social desirability questions found');
-                throw new Error('Required social desirability questions not found');
-            }
-
-            // Calculate interval for social desirability questions
-            const sdInterval = Math.floor(randomizedCore.length / (sdQuestions.length + 1));
-
-            // Insert social desirability questions at regular intervals
-            sdQuestions.forEach((q, i) => {
-                const position = Math.min((i + 1) * sdInterval, randomizedCore.length);
-                randomizedCore.splice(position, 0, q);
-            });
-
-            // Validate final question set
-            const invalidQuestions = randomizedCore.filter(q => !q || !q.id || !q.text || !q.dimension);
-            if (invalidQuestions.length > 0) {
-                logger.error('Invalid questions in final set:', {
-                    invalidCount: invalidQuestions.length,
-                    invalidQuestions
-                });
-                throw new Error('Invalid questions detected in final question set');
-            }
-
-            // Assign the validated question set
-            this.questions = randomizedCore;
-            
-            // Log final question distribution
-            logger.info('Questions loaded and randomized successfully:', {
-                totalQuestions: this.questions.length,
-                coreQuestions: coreQuestions.length,
-                qualityChecks: qualityQuestions.length,
-                attentionChecks: 2,
-                sdQuestions: sdQuestions.length,
-                questionDistribution: this.questions.reduce((acc, q) => {
-                    acc[q.dimension] = (acc[q.dimension] || 0) + 1;
-                    return acc;
-                }, {}),
-                firstQuestion: this.questions[0]?.id,
-                lastQuestion: this.questions[this.questions.length - 1]?.id
-            });
-
-            return this.questions;
+            const state = await this.loadProgress(token, email);
+            await stateManager.setState(state);
+            return true;
         } catch (error) {
-            logger.error('Failed to load questions:', {
-                error: error.message,
-                stack: error.stack
-            });
+            logger.error('Failed to resume assessment:', error);
             throw error;
         }
     }
@@ -229,50 +162,112 @@ class AssessmentManager {
      * @param {Object} demographics - User demographic information
      */
     async startAssessment(demographics) {
+        return this.executeWithTimeout(async () => {
+            try {
+                logger.info('Starting new assessment');
+
+                // Check session status
+                if (!sessionManager.checkSession()) {
+                    throw new Error('Invalid session');
+                }
+
+                // Validate demographics
+                if (!demographics || !demographics.email) {
+                    logger.error('Invalid demographics data:', { demographics });
+                    throw new Error('Invalid demographics data');
+                }
+
+                // Load and validate questions first
+                await this.loadQuestions();
+                if (!this.questions || this.questions.length === 0) {
+                    logger.error('No questions available after loading');
+                    throw new Error('Failed to load assessment questions');
+                }
+
+                // Initialize assessment state
+                const assessmentState = {
+                    id: crypto.randomUUID(),
+                    startTime: new Date().toISOString(),
+                    demographics: demographics,
+                    questions: this.questions,
+                    status: 'in_progress'
+                };
+
+                // Save assessment state and start session
+                try {
+                    await Promise.all([
+                        this.saveAssessmentState(assessmentState),
+                        sessionManager.startSession()
+                    ]);
+                } catch (error) {
+                    logger.error('Failed to initialize assessment:', error);
+                    throw error;
+                }
+
+                logger.info('Assessment started successfully:', {
+                    id: assessmentState.id,
+                    questionCount: this.questions.length,
+                    startTime: assessmentState.startTime,
+                    isOnline: database.isOnline()
+                });
+
+                return assessmentState;
+            } catch (error) {
+                logger.error('Error starting assessment:', error);
+                throw error;
+            }
+        });
+    }
+
+    async saveAssessmentState(assessmentState) {
         try {
-            logger.info('Starting new assessment');
-
-            // Validate demographics
-            if (!demographics || !demographics.email) {
-                logger.error('Invalid demographics data:', { demographics });
-                throw new Error('Invalid demographics data');
+            // Initialize database if needed
+            if (!database.isOnline()) {
+                logger.info('Database not connected, attempting to initialize...');
+                await database.initialize();
             }
 
-            // Load and validate questions first
-            await this.loadQuestions();
-            if (!this.questions || this.questions.length === 0) {
-                logger.error('No questions available after loading');
-                throw new Error('Failed to load assessment questions');
+            if (database.isOnline()) {
+                logger.info('Saving assessment to database...');
+                await database.createAssessment({
+                    id: assessmentState.id,
+                    email: assessmentState.demographics.email,
+                    demographics: assessmentState.demographics,
+                    status: assessmentState.status,
+                    created_at: assessmentState.startTime
+                });
+                logger.info('Assessment saved to database successfully');
+            } else {
+                logger.warn('Database offline, proceeding with local storage only');
             }
 
-            // Initialize assessment state
-            const assessmentState = {
-                id: crypto.randomUUID(),
-                startTime: Date.now(),
-                demographics,
-                questions: this.questions,
-                currentQuestionIndex: 0,
-                answers: {},
-                status: 'in_progress',
-                initialized: true
-            };
+            // Save assessment locally
+            try {
+                localStorage.setItem(this.STORAGE_KEYS.CURRENT, JSON.stringify(assessmentState));
+                logger.info('Assessment saved locally');
+            } catch (storageError) {
+                logger.error('Error saving assessment locally:', storageError);
+                // Continue even if local storage fails
+            }
 
-            // Update state
-            await stateManager.setState(assessmentState);
-
-            logger.info('Assessment started successfully:', {
-                id: assessmentState.id,
-                questionCount: this.questions.length,
-                email: demographics.email
-            });
-
-            return assessmentState;
+            // Update state manager
+            try {
+                await stateManager.setState({
+                    assessment: assessmentState,
+                    questions: this.questions,
+                    currentQuestionIndex: 0,
+                    answers: {},
+                    demographics: assessmentState.demographics,
+                    startTime: assessmentState.startTime,
+                    status: 'in_progress',
+                    isInitializing: true
+                });
+            } catch (stateError) {
+                logger.error('Error updating state manager:', stateError);
+                throw stateError;
+            }
         } catch (error) {
-            logger.error('Failed to start assessment:', {
-                error: error.message,
-                stack: error.stack,
-                demographics: demographics ? { ...demographics, email: '[REDACTED]' } : null
-            });
+            logger.error('Failed to save assessment state:', error);
             throw error;
         }
     }
@@ -371,76 +366,110 @@ class AssessmentManager {
      * Complete the assessment and calculate scores
      */
     async completeAssessment() {
-        try {
-            const state = stateManager.getState();
+        return this.executeWithTimeout(async () => {
+            try {
+                const state = stateManager.getState();
 
-            // Validate all questions are answered
-            const unansweredQuestions = state.questions.filter(q => !state.answers[q.id]);
-            if (unansweredQuestions.length > 0) {
-                throw new Error(`${unansweredQuestions.length} questions remain unanswered`);
+                // Validate all questions are answered
+                const unansweredQuestions = state.questions.filter(q => !state.answers[q.id]);
+                if (unansweredQuestions.length > 0) {
+                    throw new Error(`${unansweredQuestions.length} questions remain unanswered`);
+                }
+
+                // Calculate scores
+                const results = calculateScores(state.answers, state.startTime);
+
+                // Save results locally first
+                try {
+                    const resultsData = {
+                        id: state.assessment.id,
+                        timestamp: new Date().toISOString(),
+                        scores: results.scores,
+                        quality: results.quality,
+                        demographics: state.demographics,
+                        answers: state.answers
+                    };
+                    
+                    // Save to local storage
+                    const savedResults = localStorage.getItem(this.STORAGE_KEYS.COMPLETED);
+                    const completedAssessments = savedResults ? JSON.parse(savedResults) : [];
+                    completedAssessments.push(resultsData);
+                    localStorage.setItem(this.STORAGE_KEYS.COMPLETED, JSON.stringify(completedAssessments));
+                    
+                    logger.info('Results saved locally');
+                } catch (storageError) {
+                    logger.error('Failed to save results locally:', storageError);
+                }
+
+                // Try to save to database if online
+                if (database.isOnline()) {
+                    try {
+                        await database.saveResults(state.assessment.id, results.scores, {
+                            duration_minutes: Math.round((Date.now() - new Date(state.startTime).getTime()) / 60000)
+                        });
+                        logger.info('Results saved to database');
+                    } catch (dbError) {
+                        logger.error('Failed to save results to database:', dbError);
+                        // Queue for later sync
+                        this.queueForSync(state.assessment.id);
+                    }
+                } else {
+                    // Queue for later sync
+                    this.queueForSync(state.assessment.id);
+                }
+
+                // Update state with results
+                await stateManager.setState({
+                    status: 'completed',
+                    completedAt: new Date().toISOString(),
+                    scores: results.scores,
+                    quality: results.quality
+                });
+
+                logger.info('Assessment completed:', {
+                    scores: results.scores,
+                    quality: results.quality,
+                    savedLocally: true,
+                    savedToDatabase: database.isOnline()
+                });
+
+                return results;
+            } catch (error) {
+                logger.error('Error completing assessment:', error);
+                throw error;
             }
+        });
+    }
 
-            // Calculate scores
-            const results = calculateScores(state.answers, state.startTime);
-
-            // Update state with results
-            await stateManager.setState({
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                scores: results.scores,
-                quality: results.quality
-            });
-
-            logger.info('Assessment completed:', {
-                scores: results.scores,
-                quality: results.quality
-            });
-
-            return results;
+    /**
+     * Queue an assessment for later sync
+     */
+    queueForSync(assessmentId) {
+        try {
+            const syncQueue = JSON.parse(localStorage.getItem(this.STORAGE_KEYS.SYNC_QUEUE) || '[]');
+            if (!syncQueue.includes(assessmentId)) {
+                syncQueue.push(assessmentId);
+                localStorage.setItem(this.STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(syncQueue));
+                logger.info('Assessment queued for sync:', assessmentId);
+            }
         } catch (error) {
-            logger.error('Error completing assessment:', error);
-            throw error;
+            logger.error('Failed to queue for sync:', error);
         }
     }
 
     /**
-     * Generate and email assessment report
+     * Execute an operation with timeout
      */
-    async emailReport(email) {
-        try {
-            const state = stateManager.getState();
-            if (!state.scores) {
-                throw new Error('No scores available');
-            }
-
-            // TODO: Implement email report generation and sending
-            logger.info('Email report requested:', { email });
-            return true;
-        } catch (error) {
-            logger.error('Error sending email report:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Generate and download assessment report
-     */
-    async downloadReport() {
-        try {
-            const state = stateManager.getState();
-            if (!state.scores) {
-                throw new Error('No scores available');
-            }
-
-            // TODO: Implement report download
-            logger.info('Download report requested');
-            return true;
-        } catch (error) {
-            logger.error('Error downloading report:', error);
-            throw error;
-        }
+    async executeWithTimeout(operation) {
+        return Promise.race([
+            operation(),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Operation timed out')), this.OPERATION_TIMEOUT)
+            )
+        ]);
     }
 }
 
-// Export singleton instance
-export default new AssessmentManager(); 
+// Create and export a singleton instance
+const assessmentManager = new AssessmentManager();
+export default assessmentManager;

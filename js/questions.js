@@ -17,14 +17,11 @@
  */
 
 import validAssessmentData from "./questions-data.js";
-import { supabase, isOnline } from "./database.js";
+import database from "./database-clean.js";
 import { logger } from "./logger.js";
+import assessmentManager from './assessment-manager.js';
 
-// Local storage keys
-const STORAGE_KEYS = {
-    CURRENT_ASSESSMENT: 'valid_current_assessment',
-    QUESTIONS: 'valid_questions'
-};
+const { supabase, isOnline } = database;
 
 /**
  * Manages the assessment questions and user responses
@@ -40,8 +37,7 @@ class QuestionManager {
             this.isInitialized = false;
 
             // Clear any existing cache
-            localStorage.removeItem(STORAGE_KEYS.QUESTIONS);
-            localStorage.removeItem(STORAGE_KEYS.CURRENT_ASSESSMENT);
+            localStorage.removeItem(assessmentManager.STORAGE_KEYS.CURRENT);
 
             // Load questions directly from questions-data.js
             this.questions = validAssessmentData.questions.map((q, index) => ({
@@ -233,11 +229,11 @@ class QuestionManager {
             }
 
             // Always save to local storage as backup
-            const currentAssessment = localStorage.getItem(STORAGE_KEYS.CURRENT_ASSESSMENT);
+            const currentAssessment = localStorage.getItem(assessmentManager.STORAGE_KEYS.CURRENT);
             if (currentAssessment) {
                 const assessment = JSON.parse(currentAssessment);
                 const updatedAssessment = { ...assessment, ...progressData };
-                localStorage.setItem(STORAGE_KEYS.CURRENT_ASSESSMENT, JSON.stringify(updatedAssessment));
+                localStorage.setItem(assessmentManager.STORAGE_KEYS.CURRENT, JSON.stringify(updatedAssessment));
                 logger.info('Progress saved to local storage');
             }
 
@@ -253,7 +249,7 @@ class QuestionManager {
      */
     calculateScores() {
         const scores = {
-            V: 0, // Veracity
+            V: 0, // Verity
             A: 0, // Association
             L: 0, // Lived Experience
             I: 0, // Institutional Knowledge
@@ -292,7 +288,7 @@ class QuestionManager {
 
         // Map categories to full names
         const categoryNames = {
-            V: 'Veracity-Driven',
+            V: 'Verity-Driven',
             A: 'Association-Based',
             L: 'Experience-Led',
             I: 'Institution-Aligned',
@@ -342,8 +338,7 @@ class QuestionManager {
      */
     clearCache() {
         try {
-            localStorage.removeItem(STORAGE_KEYS.QUESTIONS);
-            localStorage.removeItem(STORAGE_KEYS.CURRENT_ASSESSMENT);
+            localStorage.removeItem(assessmentManager.STORAGE_KEYS.CURRENT);
             logger.info('Question cache cleared successfully');
             return true;
         } catch (error) {

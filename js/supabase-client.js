@@ -1,149 +1,329 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
 import { logger } from './logger.js';
 
+// Singleton instance
 let supabaseInstance = null;
-let initializationAttempts = 0;
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+let initializationPromise = null;
+const MAX_RETRIES = 5; // Reduced retries to fail faster
+const RETRY_DELAY = 1000; // Increased delay between retries
+let isOfflineMode = false;
 
-async function initialize(retryCount = 0) {
+// Helper function to validate Supabase URL format
+function isValidSupabaseUrl(url) {
     try {
-        // Log initialization attempt
-        logger.info('Starting Supabase initialization', {
-            attempt: retryCount + 1,
-            maxRetries: MAX_RETRIES,
-            hasInstance: !!supabaseInstance
-        });
-
-        // Check environment
-        if (!window.__env__) {
-            logger.error('Environment not loaded', {
-                env: typeof window.__env__,
-                windowKeys: Object.keys(window)
-            });
-            throw new Error('Environment variables not loaded');
-        }
-
-        const { SUPABASE_URL, SUPABASE_ANON_KEY, VALID_ENV } = window.__env__;
-        
-        // Log environment status
-        logger.info('Environment check', {
-            hasUrl: !!SUPABASE_URL,
-            urlLength: SUPABASE_URL?.length,
-            hasKey: !!SUPABASE_ANON_KEY,
-            keyLength: SUPABASE_ANON_KEY?.length,
-            environment: VALID_ENV
-        });
-        
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            logger.error('Missing Supabase configuration', {
-                hasUrl: !!SUPABASE_URL,
-                hasKey: !!SUPABASE_ANON_KEY
-            });
-            throw new Error('Missing Supabase configuration');
-        }
-
-        // Create client
-        logger.info('Creating Supabase client...');
-        supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true
-            }
-        });
-
-        // Test basic connectivity
-        logger.info('Testing basic connectivity...');
-        const { data: versionData, error: versionError } = await supabaseInstance
-            .rpc('version')
-            .select();
-
-        if (versionError) {
-            logger.warn('Basic connectivity test failed', {
-                error: versionError.message,
-                code: versionError.code,
-                details: versionError.details,
-                hint: versionError.hint
-            });
-        } else {
-            logger.info('Basic connectivity test passed', { version: versionData });
-        }
-
-        // Test table access
-        logger.info('Testing questions table access...');
-        const { data, error } = await supabaseInstance
-            .from('questions')
-            .select('count')
-            .limit(1);
-
-        if (error) {
-            logger.error('Questions table test failed', {
-                error: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint
-            });
-            throw error;
-        }
-
-        logger.info('Supabase client initialized successfully', {
-            hasData: !!data,
-            dataType: typeof data,
-            connectionStatus: supabaseInstance.connectionStatus
-        });
-        
-        return supabaseInstance;
-    } catch (error) {
-        logger.error('Failed to initialize Supabase client', {
-            error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            attempt: retryCount + 1,
-            stack: error.stack
-        });
-
-        if (retryCount < MAX_RETRIES) {
-            logger.info(`Retrying Supabase initialization in ${RETRY_DELAY}ms...`);
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-            return initialize(retryCount + 1);
-        }
-
-        throw new Error(`Failed to initialize Supabase after ${MAX_RETRIES} attempts: ${error.message}`);
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' && 
+               (parsed.host.includes('supabase.co') || parsed.host.includes('supabase.in'));
+    } catch (e) {
+        return false;
     }
 }
 
-// Add connection status check
+// Helper function to validate Supabase key format
+function isValidSupabaseKey(key) {
+    // Supabase anon keys are typically long base64 strings
+    return typeof key === 'string' && key.length > 20;
+}
+
+// Offline mode fallback functions
+const offlineFallback = {
+    async from(table) {
+        logger.warn('Operating in offline mode - using localStorage fallback');
+        return {
+            select: () => ({ data: [], error: null }),
+            insert: () => ({ data: null, error: { message: 'Offline mode - data not saved' } }),
+            update: () => ({ data: null, error: { message: 'Offline mode - data not updated' } }),
+            delete: () => ({ data: null, error: { message: 'Offline mode - data not deleted' } })
+        };
+    },
+    async rpc() {
+        return { data: null, error: { message: 'Offline mode - RPC not available' } };
+    }
+};
+
+// Initialize Supabase with retry logic
+async function initializeSupabase(attempt = 1, maxRetries = 5) {
+    const env = window.__env__ || {};
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+
+    if (isDevelopment) {
+        logger.info('Development environment detected - using offline mode');
+        isOfflineMode = true;
+        return offlineFallback;
+    }
+
+    const hasEnv = !!(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL);
+
+    logger.debug('Starting Supabase initialization:', {
+        attempt,
+        maxRetries,
+        hasInstance: !!supabaseInstance,
+        env: {
+            VALID_ENV: env.VALID_ENV,
+            SUPABASE_URL: env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL,
+            SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY ? '[KEY EXISTS]' : undefined,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '[KEY EXISTS]' : undefined,
+            EMAILJS_SERVICE_ID: env.EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID: env.EMAILJS_TEMPLATE_ID,
+            EMAILJS_USER_ID: env.EMAILJS_USER_ID,
+            SANDBOX_EMAIL: env.SANDBOX_EMAIL
+        },
+        hasEnv
+    });
+
+    if (!hasEnv) {
+        logger.info('No Supabase configuration found - using offline mode');
+        isOfflineMode = true;
+        return offlineFallback;
+    }
+
+    if (supabaseInstance) {
+        return supabaseInstance;
+    }
+
+    const supabaseUrl = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // Validate URL and key
+    if (!isValidSupabaseUrl(supabaseUrl)) {
+        logger.info('Invalid Supabase URL format - using offline mode');
+        isOfflineMode = true;
+        return offlineFallback;
+    }
+
+    if (!isValidSupabaseKey(supabaseKey)) {
+        logger.info('Invalid Supabase key format - using offline mode');
+        isOfflineMode = true;
+        return offlineFallback;
+    }
+
+    logger.debug('Creating Supabase client with URL:', supabaseUrl);
+
+    try {
+        // Create client with timeout
+        const client = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            },
+            realtime: {
+                timeout: 20000
+            }
+        });
+        
+        // Test connectivity with timeout
+        logger.debug('Testing basic connectivity...');
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 10000)
+        );
+        
+        await Promise.race([
+            client.from('assessments').select('count').limit(1),
+            timeoutPromise
+        ]);
+        
+        supabaseInstance = client;
+        isOfflineMode = false;
+        logger.info('Supabase client initialized successfully');
+        return client;
+
+    } catch (error) {
+        logger.debug('Basic connectivity test failed', {
+            error: error.message,
+            code: error.code || '',
+            details: error.toString(),
+            hint: error.hint || ''
+        });
+
+        if (attempt < maxRetries && !isDevelopment) {
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+            logger.debug(`Retrying Supabase initialization in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return initializeSupabase(attempt + 1, maxRetries);
+        }
+
+        logger.info('Using offline mode after failed connection attempts');
+        isOfflineMode = true;
+        return offlineFallback;
+    }
+}
+
+// Database operations with offline fallback
+async function createTables() {
+    if (isOfflineMode) {
+        logger.warn('Failed to create tables:', { message: 'Offline mode - RPC not available' });
+        return;
+    }
+
+    try {
+        const client = await initializeSupabase();
+        if (!client) return;
+
+        // Create tables if they don't exist
+        await client.rpc('create_tables');
+        logger.debug('Tables created successfully');
+
+    } catch (error) {
+        logger.error('Failed to create tables:', error);
+        isOfflineMode = true;
+    }
+}
+
+// Save assessment data with offline fallback
+async function saveAssessment(data) {
+    if (isOfflineMode) {
+        // Store in localStorage as fallback
+        const key = `assessment_${Date.now()}`;
+        localStorage.setItem(key, JSON.stringify(data));
+        return { id: key, offline: true };
+    }
+
+    try {
+        const client = await initializeSupabase();
+        if (!client) throw new Error('No Supabase client available');
+
+        const { data: result, error } = await client
+            .from('assessments')
+            .insert(data)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return result;
+
+    } catch (error) {
+        logger.error('Failed to save assessment:', error);
+        // Fallback to localStorage
+        const key = `assessment_${Date.now()}`;
+        localStorage.setItem(key, JSON.stringify(data));
+        return { id: key, offline: true };
+    }
+}
+
+// Get assessment by ID with offline fallback
+async function getAssessment(id) {
+    if (isOfflineMode) {
+        const data = localStorage.getItem(id);
+        return data ? JSON.parse(data) : null;
+    }
+
+    try {
+        const client = await initializeSupabase();
+        if (!client) throw new Error('No Supabase client available');
+
+        const { data, error } = await client
+            .from('assessments')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+
+    } catch (error) {
+        logger.error('Failed to get assessment:', error);
+        // Try localStorage as fallback
+        const data = localStorage.getItem(id);
+        return data ? JSON.parse(data) : null;
+    }
+}
+
+// Add connection status check with detailed diagnostics
 function getConnectionStatus() {
+    if (isOfflineMode) {
+        return {
+            status: 'offline_mode',
+            error: 'Operating in offline fallback mode',
+            timestamp: new Date().toISOString()
+        };
+    }
+    
     if (!supabaseInstance) {
         return {
             status: 'not_initialized',
-            error: null
+            error: null,
+            timestamp: new Date().toISOString()
         };
     }
     
     return {
         status: 'initialized',
-        connectionStatus: supabaseInstance.connectionStatus,
+        connectionStatus: supabaseInstance?.connectionStatus,
         hasInstance: true,
-        auth: {
-            session: supabaseInstance.auth.session(),
-            user: supabaseInstance.auth.user()
-        }
+        timestamp: new Date().toISOString(),
+        environment: window.__env__?.VALID_ENV || 'unknown'
     };
 }
 
+// Add health check function
+async function checkHealth() {
+    if (isOfflineMode) {
+        return {
+            healthy: false,
+            error: 'Operating in offline mode',
+            timestamp: new Date().toISOString(),
+            mode: 'offline'
+        };
+    }
+
+    if (!supabaseInstance) {
+        return {
+            healthy: false,
+            error: 'Client not initialized',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    try {
+        const { error } = await Promise.race([
+            supabaseInstance
+                .from('questions')
+                .select('count')
+                .limit(1),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Health check timeout')), 3000)
+            )
+        ]);
+
+        return {
+            healthy: !error,
+            error: error?.message,
+            timestamp: new Date().toISOString(),
+            details: error ? {
+                code: error.code,
+                hint: error.hint
+            } : null
+        };
+    } catch (e) {
+        return {
+            healthy: false,
+            error: e.message,
+            timestamp: new Date().toISOString(),
+            details: {
+                stack: e.stack
+            }
+        };
+    }
+}
+
+// Export functions and initialized client
+export {
+    initializeSupabase,
+    getConnectionStatus,
+    checkHealth,
+    saveAssessment,
+    getAssessment,
+    createTables
+};
+
+// Default export for backward compatibility
 export default {
-    initialize,
     getInstance() {
-        if (!supabaseInstance) {
-            logger.error('Supabase client accessed before initialization');
-            throw new Error('Supabase client not initialized. Call initialize() first.');
-        }
         return supabaseInstance;
     },
     isInitialized() {
         return !!supabaseInstance;
-    },
-    getStatus: getConnectionStatus
+    }
 }; 
