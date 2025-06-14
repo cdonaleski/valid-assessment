@@ -1,84 +1,129 @@
 # VALID Assessment Platform
 
-A web-based assessment platform for evaluating decision-making styles and providing personalized feedback.
+A web-based assessment platform for evaluating decision-making styles and providing personalized feedback. Built with Node.js, Express, and Supabase, it offers interactive assessments, real-time scoring, and robust reporting features.
+
+---
 
 ## Features
 
-- Interactive assessment interface
-- Real-time scoring and analysis
-- PDF report generation
-- Offline support with local storage
-- Secure data handling with Supabase
+- **Interactive Assessment Interface**: User-friendly, step-by-step assessment flow.
+- **Real-Time Scoring & Analysis**: Instant feedback and persona calculation.
+- **PDF Report Generation**: Downloadable, professional reports.
+- **Offline Support**: Local storage for in-progress assessments.
+- **Secure Data Handling**: Supabase integration for secure storage.
+- **Dev Mode**: Toggleable debug panel and test data generation for developers.
 
-## Development
+---
 
-1. Clone the repository:
+## Directory Structure
+
+```
+valid-assessment/
+├── css/                # Stylesheets (main, components, debug, layout, etc.)
+├── img/                # Image assets
+├── js/                 # JavaScript source files
+│   ├── assessment-controller.js   # Main assessment logic and UI control
+│   ├── scoring.js                # Scoring and persona calculation
+│   ├── reports.js                # PDF report generation
+│   ├── logger.js                 # Debug panel and logging
+│   ├── supabase-client.js        # Supabase integration
+│   ├── ...                       # Other modules (state, utils, etc.)
+├── supabase/           # Supabase config and migrations
+│   ├── migrations/              # SQL migration scripts
+│   └── config.toml              # Supabase project config
+├── index.html          # Main assessment page
+├── results.html        # Results/report page
+├── admin.html          # Admin dashboard
+├── dev-server.js       # Development server (with live reload)
+├── simple-server.js    # Simple static server
+├── package.json        # Project metadata and scripts
+├── vercel.json         # Vercel deployment config
+└── README.md           # Project documentation
+```
+
+---
+
+## Setup & Usage
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/yourusername/valid-assessment.git
 cd valid-assessment
 ```
 
-2. Install dependencies:
+### 2. Install dependencies
 ```bash
 npm install
 ```
 
-3. Create a `.env` file with your environment variables:
+### 3. Configure environment variables
+Create a `.env` file:
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 VALID_ENV=development
 ```
 
-4. Start the development server:
+### 4. Start the development server
 ```bash
 npm run dev
 ```
+Visit [http://localhost:8000](http://localhost:8000) in your browser.
+
+---
 
 ## Deployment
 
-### Vercel Deployment
+### Vercel
+- Install Vercel CLI: `npm i -g vercel`
+- Deploy: `vercel`
+- Set environment variables in the Vercel dashboard:
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+  - `VALID_ENV=production`
 
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
+### Supabase
+- Create a project at [supabase.com](https://supabase.com/)
+- Run the SQL scripts in `supabase/migrations/` to set up your database schema
+- Copy your Supabase URL and anon key to your `.env` and Vercel settings
 
-2. Deploy to Vercel:
-```bash
-vercel
-```
+### GitHub
+- Push your code to a GitHub repository
+- Connect your repo to Vercel for automatic deployments
 
-3. Set up environment variables in Vercel dashboard:
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `VALID_ENV=production`
+---
 
-### Supabase Setup
+## Developer Guide
 
-1. Create a new project in Supabase
-2. Set up the database schema
-3. Configure environment variables in Vercel with your Supabase credentials
+- **Dev Mode**: Use the toggle switch at the bottom left of the results page to enable the debug panel and test data generation.
+- **Testing**: (Coming soon) Unit and integration tests will be in `js/__tests__/`.
+- **Contributing**: Fork the repo, create a feature branch, submit a pull request.
+- **Scripts**:
+  - `npm run dev` – Start dev server
+  - `npm start` – Start simple server
+  - `npm run build` – (No build step required)
 
-### GitHub Integration
+---
 
-1. Create a new repository on GitHub
-2. Push your code:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/yourusername/valid-assessment.git
-git push -u origin main
-```
+## API & Integration
 
-3. Connect your GitHub repository to Vercel for automatic deployments
+- **Supabase**: Used for authentication, data storage, and retrieval.
+- **Endpoints**: (If you add custom endpoints, document them here.)
+- **Environment Variables**:
+  - `SUPABASE_URL`: Your Supabase project URL
+  - `SUPABASE_ANON_KEY`: Your Supabase anon key
+  - `VALID_ENV`: `development` or `production`
 
-## Environment Variables
+---
 
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `VALID_ENV`: Environment (development/production)
+## Troubleshooting & FAQ
+
+- **Supabase errors**: Check your environment variables and Supabase project status.
+- **Port in use**: Change the `PORT` in your `.env` or stop other servers.
+- **Debug panel not visible**: Use the Dev Mode toggle switch.
+- **PDF not generating**: Ensure jsPDF is loaded and browser supports downloads.
+
+---
 
 ## License
 
