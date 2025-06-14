@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "./build.sh",
-  "outputDirectory": ".",
   "builds": [
     {
       "src": "*.html",
