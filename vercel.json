@@ -41,7 +41,6 @@
     {
       "src": "/(.*)",
       "dest": "simple-server.js"
-}
+    }
   ]
-  // No "env" block here!
 }
