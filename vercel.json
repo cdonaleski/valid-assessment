@@ -41,14 +41,7 @@
     {
       "src": "/(.*)",
       "dest": "simple-server.js"
-    }
-  ],
-  "env": {
-    "VALID_ENV": "production",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "EMAILJS_SERVICE_ID": "@emailjs_service_id",
-    "EMAILJS_TEMPLATE_ID": "@emailjs_template_id",
-    "EMAILJS_USER_ID": "@emailjs_user_id"
-  }
-} 
+}
+  ]
+  // No "env" block here!
+}
