@@ -42,10 +42,8 @@ class AssessmentManager {
 
     async loadQuestions() {
         try {
-            // Import questions from the questions-data module instead of fetching from JSON
-            // Updated for Vercel deployment - using ES6 dynamic imports
-            const { questions } = await import('./questions-data.js');
-            this.questions = questions;
+            // Use the already imported questions data
+            this.questions = validAssessmentData.questions;
             return this.questions;
         } catch (error) {
             logger.error('Failed to load questions:', error);
