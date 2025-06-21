@@ -42,11 +42,9 @@ class AssessmentManager {
 
     async loadQuestions() {
         try {
-            const response = await fetch('./data/questions.json');
-            if (!response.ok) {
-                throw new Error('Failed to load questions');
-            }
-            this.questions = await response.json();
+            // Import questions from the questions-data module instead of fetching from JSON
+            const { questions } = await import('./questions-data.js');
+            this.questions = questions;
             return this.questions;
         } catch (error) {
             logger.error('Failed to load questions:', error);
