@@ -44,6 +44,7 @@ class AssessmentManager {
         try {
             // Use the already imported questions data
             // Version: 2024-01-15 - Fixed for Vercel deployment
+            // DEPLOYMENT TEST: This should load questions from module, not JSON file
             this.questions = validAssessmentData.questions;
             return this.questions;
         } catch (error) {

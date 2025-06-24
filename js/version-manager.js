@@ -5,7 +5,7 @@
 
 class VersionManager {
     constructor() {
-        this.version = '1.0.1';
+        this.version = '1.0.2';
         this.buildDate = '2024-01-15';
         this.deploymentId = this.generateDeploymentId();
         this.init();
