@@ -464,9 +464,16 @@ if (typeof Chart !== 'undefined' && Chart.register) {
     Chart.register(ChartDataLabels);
 }
 
-// Initialize event listeners
-window.addEventListener('load', function() {
-    console.log('Setting up event listeners...');
+// Expose functions to global scope
+window.getResultsData = getResultsData;
+window.updateResultsUI = updateResultsUI;
+window.retakeAssessment = retakeAssessment;
+window.exportResults = exportResults;
+window.emailResults = emailResults;
+
+// Initialize results function
+function initializeResults() {
+    console.log('Initializing results page...');
     
     // Initialize the UI with data
     const resultsData = getResultsData();
@@ -579,11 +586,7 @@ window.addEventListener('load', function() {
     });
 
     console.log('All event listeners attached successfully');
-});
+}
 
-// Expose functions to global scope
-window.getResultsData = getResultsData;
-window.updateResultsUI = updateResultsUI;
-window.retakeAssessment = retakeAssessment;
-window.exportResults = exportResults;
-window.emailResults = emailResults;
+// Export the initializeResults function
+window.initializeResults = initializeResults;
