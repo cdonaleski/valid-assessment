@@ -226,7 +226,15 @@
         
         // Initialize results page
         document.addEventListener('DOMContentLoaded', () => {
-            initializeResults();
+            // Wait a moment for results.js to load
+            setTimeout(() => {
+                if (typeof window.initializeResults === 'function') {
+                    console.log('Calling initializeResults...');
+                    window.initializeResults();
+                } else {
+                    console.error('initializeResults function not found on window object');
+                }
+            }, 100);
         });
 
         // Dev Mode Toggle

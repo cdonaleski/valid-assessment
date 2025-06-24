@@ -19,13 +19,13 @@ const validAssessment = Object.freeze({
             max: 7,
             step: 1,
             labels: {
-                1: 'Not likely',
-                2: 'Slightly likely',
-                3: 'Somewhat likely',
+                1: 'Not Very Characteristic',
+                2: 'Somewhat Uncharacteristic',
+                3: 'Slightly Uncharacteristic',
                 4: 'Neutral',
-                5: 'Quite likely',
-                6: 'Highly likely',
-                7: 'Very likely'
+                5: 'Slightly Characteristic',
+                6: 'Somewhat Characteristic',
+                7: 'Very Characteristic'
             }
         },
         dimensions: ['V', 'A', 'L', 'I', 'D'],
@@ -453,7 +453,7 @@ const validAssessment = Object.freeze({
         },
         {
             id: "AC-02",
-            text: "For quality control purposes, please select 'Not likely' (1) for this item.",
+            text: "For quality control purposes, please select 'Not very characteristic' (1) for this item.",
             dimension: "attention_check",
             category: "quality",
             correctAnswer: 1

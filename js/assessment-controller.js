@@ -663,6 +663,7 @@ export class AssessmentController {
             const resultsData = {
                 scores: scores.scores,
                 quality: scores.quality,
+                answers: currentState.answers,
                 timestamp: Date.now()
             };
             const encodedData = btoa(JSON.stringify(resultsData));
