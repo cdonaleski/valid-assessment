@@ -14,7 +14,27 @@ function getResultsData() {
         }
     }
 
-    // Fallback to localStorage
+    // Try to get data from completed assessments (where assessment-manager.js saves it)
+    const completedAssessments = localStorage.getItem('valid_completed_assessments');
+    if (completedAssessments) {
+        try {
+            const parsedCompleted = JSON.parse(completedAssessments);
+            if (Array.isArray(parsedCompleted) && parsedCompleted.length > 0) {
+                const latestAssessment = parsedCompleted[parsedCompleted.length - 1];
+                if (latestAssessment.scores) {
+                    console.log('Found scores in completed assessments:', latestAssessment.scores);
+                    return {
+                        scores: latestAssessment.scores,
+                        quality: latestAssessment.quality
+                    };
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing completed assessments data:', error);
+        }
+    }
+
+    // Fallback to localStorage (old keys for backward compatibility)
     const assessmentData = localStorage.getItem('validAssessmentData');
     const stateData = localStorage.getItem('validAssessmentState');
     
