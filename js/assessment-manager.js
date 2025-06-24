@@ -43,6 +43,7 @@ class AssessmentManager {
     async loadQuestions() {
         try {
             // Use the already imported questions data
+            // Version: 2024-01-15 - Fixed for Vercel deployment
             this.questions = validAssessmentData.questions;
             return this.questions;
         } catch (error) {
