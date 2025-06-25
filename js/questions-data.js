@@ -46,51 +46,58 @@ const validAssessment = Object.freeze({
         {
             id: "DT-01",
             text: "When facing an important choice, I start by gathering facts and data.",
-            dimension: "verity",
             category: "decision_triggers",
-            reverse: false
+            dimension: "V",
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "DT-02",
             text: "When I need to decide something significant, I first think about who else has dealt with this.",
-            dimension: "association",
             category: "decision_triggers",
-            reverse: false
+            dimension: "A",
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "DT-03",
             text: "When a big decision comes up, I reflect on similar situations I've experienced.",
-            dimension: "lived",
             category: "decision_triggers",
-            reverse: false
+            dimension: "L",
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "DT-04",
             text: "When I have an important choice to make, I look for established guidelines or best practices.",
-            dimension: "institutional",
             category: "decision_triggers",
-            reverse: false
+            dimension: "I",
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "DT-05",
             text: "When facing a major decision, I start by clarifying what outcome would feel most meaningful.",
-            dimension: "desire",
             category: "decision_triggers",
-            reverse: false
+            dimension: "D",
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "DT-06",
             text: "I often make decisions without waiting for complete data.",
-            dimension: "verity",
             category: "decision_triggers",
-            reverse: true
+            dimension: "V",
+            reverse: true,
+            scale: [1, 7]
         },
         {
             id: "DT-07",
             text: "I prefer to decide things independently rather than seek input from others.",
-            dimension: "association",
             category: "decision_triggers",
-            reverse: true
+            dimension: "A",
+            reverse: true,
+            scale: [1, 7]
         },
 
         // Information Sources & Weighting
@@ -412,35 +419,40 @@ const validAssessment = Object.freeze({
             text: "I have never intensely disliked anyone.",
             dimension: "social_desirability",
             category: "quality",
-            reverse: false
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "SD-02",
             text: "I sometimes feel resentful when I don't get my way.",
             dimension: "social_desirability",
             category: "quality",
-            reverse: true
+            reverse: true,
+            scale: [1, 7]
         },
         {
             id: "SD-03",
             text: "I am always courteous, even to people who are disagreeable.",
             dimension: "social_desirability",
             category: "quality",
-            reverse: false
+            reverse: false,
+            scale: [1, 7]
         },
         {
             id: "SD-04",
             text: "There have been times when I felt like rebelling against authority.",
             dimension: "social_desirability",
             category: "quality",
-            reverse: true
+            reverse: true,
+            scale: [1, 7]
         },
         {
             id: "SD-05",
             text: "I have never been irked when people expressed ideas very different from my own.",
             dimension: "social_desirability",
             category: "quality",
-            reverse: false
+            reverse: false,
+            scale: [1, 7]
         },
 
         // Attention Checks
@@ -449,14 +461,74 @@ const validAssessment = Object.freeze({
             text: "Please select '4 - Neutral' for this statement: I am paying attention to this survey.",
             dimension: "attention_check",
             category: "quality",
-            correctAnswer: 4
+            correctAnswer: 4,
+            scale: [1, 7]
         },
         {
             id: "AC-02",
             text: "For quality control purposes, please select 'Not very characteristic' (1) for this item.",
             dimension: "attention_check",
             category: "quality",
-            correctAnswer: 1
+            correctAnswer: 1,
+            scale: [1, 7]
+        },
+
+        // Metacognitive Awareness
+        {
+            id: "AW-01",
+            text: "I often reflect on how I arrived at a decision.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: false,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-02",
+            text: "I can tell when my emotions are influencing my judgment.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: false,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-03",
+            text: "I recognize when external advice is affecting my thinking.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: false,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-04",
+            text: "I rarely stop to question my own reasoning process.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: true,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-05",
+            text: "I know when I'm making decisions out of habit.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: false,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-06",
+            text: "I adjust my decision style depending on the situation.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: false,
+            scale: [1, 7]
+        },
+        {
+            id: "AW-07",
+            text: "I make most decisions without much self-reflection.",
+            category: "awareness",
+            dimension: "Awareness",
+            reverse: true,
+            scale: [1, 7]
         }
     ]
 });

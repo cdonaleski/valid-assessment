@@ -6,6 +6,7 @@
     --lived-color: #4caf50;
     --institutional-color: #ffd166;
     --desire-color: #ef476f;
+    --awareness-color: #9c27b0;
     
     /* Base Colors */
     --background: #f8f9fa;
@@ -223,7 +224,89 @@ h1 {
 
 .description {
     color: var(--text-light);
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+/* Scenario Selector Styles */
+.scenario-selector {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+}
+
+.scenario-header h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.scenario-header p {
+    margin: 0 0 1rem 0;
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.scenario-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.scenario-dropdown {
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--border-radius-md);
+    background: var(--white);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.scenario-dropdown:hover {
+    border-color: var(--verity-color);
+}
+
+.scenario-dropdown:focus {
+    outline: none;
+    border-color: var(--verity-color);
+    box-shadow: 0 0 0 3px rgba(13, 78, 92, 0.1);
+}
+
+.scenario-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.scenario-info span {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Responsive scenario selector */
+@media (max-width: 768px) {
+    .scenario-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .scenario-dropdown {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .scenario-info {
+        min-width: auto;
+    }
 }
 
 /* Profile Section */
@@ -346,6 +429,7 @@ h1 {
 .score-bar.lived { background-color: var(--lived-color); }
 .score-bar.institutional { background-color: var(--institutional-color); }
 .score-bar.desire { background-color: var(--desire-color); }
+.score-bar.awareness { background-color: var(--awareness-color); }
 
 /* Development Section */
 .development-section {
@@ -372,9 +456,37 @@ h1 {
 }
 
 .recommendation p {
-    color: var(--text-light);
-    font-size: 0.9rem;
-    margin: 0;
+    margin: 0.5rem 0;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+/* New recommendation types for scenarios */
+.recommendation.strengths {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.1) 100%);
+    border-left: 4px solid var(--success);
+}
+
+.recommendation.strengths h3 {
+    color: var(--success);
+}
+
+.recommendation.development {
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.05) 0%, rgba(23, 162, 184, 0.1) 100%);
+    border-left: 4px solid var(--info);
+}
+
+.recommendation.development h3 {
+    color: var(--info);
+}
+
+.recommendation.challenges {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.1) 100%);
+    border-left: 4px solid var(--error);
+}
+
+.recommendation.challenges h3 {
+    color: var(--error);
 }
 
 /* Action Buttons */
@@ -720,4 +832,65 @@ input:checked + .slider:before {
     font-size: 1rem;
     font-weight: 600;
     color: var(--verity-color);
+}
+
+/* Awareness Section */
+.awareness-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--white);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    border-left: 4px solid var(--awareness-color);
+}
+
+.awareness-section h3 {
+    margin: 0 0 1rem 0;
+    color: var(--text);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.awareness-score {
+    margin-bottom: 1rem;
+}
+
+.awareness-score .score-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.awareness-score .score-bar {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.awareness-description {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.profile-summary-section {
+    margin: 3rem 0 2.5rem 0;
+    text-align: center;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+.profile-summary-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: var(--text);
+    text-align: left;
 } 

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awareness Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Awareness Score Test</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+        
+        try {
+            log('Starting awareness test...');
+            
+            // Test importing scoring module
+            log('Importing scoring module...');
+            const { calculateAwarenessScore } = await import('./js/scoring.js');
+            log('Scoring module imported successfully', 'success');
+            
+            // Test with awareness questions only
+            const testAnswers = {
+                "AW-01": 6, "AW-02": 5, "AW-03": 6, "AW-04": 3, 
+                "AW-05": 5, "AW-06": 6, "AW-07": 4
+            };
+            
+            log('Test answers: ' + JSON.stringify(testAnswers));
+            
+            // Calculate awareness
+            const awareness = calculateAwarenessScore(testAnswers);
+            log('Awareness calculated: ' + JSON.stringify(awareness), 'success');
+            
+            // Test the calculation manually
+            log('Manual calculation check:');
+            let sum = 0;
+            let count = 0;
+            
+            Object.entries(testAnswers).forEach(([questionId, value]) => {
+                // AW-04 and AW-07 are reverse scored
+                const isReverse = questionId === 'AW-04' || questionId === 'AW-07';
+                const scoreValue = isReverse ? (8 - value) : value;
+                sum += scoreValue;
+                count++;
+                log(`Question ${questionId}: value=${value}, reverse=${isReverse}, scoreValue=${scoreValue}`);
+            });
+            
+            const percent = Math.round(((sum - count) / (6 * count)) * 100);
+            log(`Manual calculation: sum=${sum}, count=${count}, percent=${percent}`, 'success');
+            
+            log('Test completed successfully!', 'success');
+            
+        } catch (error) {
+            log('Error: ' + error.message, 'error');
+            log('Stack: ' + error.stack, 'error');
+        }
+    </script>
+</body>
+</html> 

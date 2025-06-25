@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Scoring Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .score-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .score-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+        }
+        .score-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .score-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .good { color: green; }
+        .warning { color: orange; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Scoring Fix</h1>
+        
+        <button onclick="testRawScoring()">Test Raw Scoring</button>
+        <button onclick="testContextScoring()">Test Context Scoring</button>
+        <button onclick="testAwarenessScoring()">Test Awareness Scoring</button>
+        <button onclick="clearDebug()">Clear Debug</button>
+
+        <div class="score-display" id="scoreDisplay">
+            <div class="score-card">
+                <div class="score-value" id="scoreV">--</div>
+                <div class="score-label">Verity (V)</div>
+            </div>
+            <div class="score-card">
+                <div class="score-value" id="scoreA">--</div>
+                <div class="score-label">Association (A)</div>
+            </div>
+            <div class="score-card">
+                <div class="score-value" id="scoreL">--</div>
+                <div class="score-label">Lived Experience (L)</div>
+            </div>
+            <div class="score-card">
+                <div class="score-value" id="scoreI">--</div>
+                <div class="score-label">Institutional (I)</div>
+            </div>
+            <div class="score-card">
+                <div class="score-value" id="scoreD">--</div>
+                <div class="score-label">Desire (D)</div>
+            </div>
+            <div class="score-card">
+                <div class="score-value" id="scoreAW">--</div>
+                <div class="score-label">Awareness</div>
+            </div>
+        </div>
+
+        <div class="debug-info" id="debugInfo">
+            <h4>Debug Information:</h4>
+            <div id="debugOutput"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        function log(message, type = 'info') {
+            const debugOutput = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            debugOutput.appendChild(logEntry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateScoreDisplay(scores, awareness = null) {
+            document.getElementById('scoreV').textContent = `${scores.V || 0}%`;
+            document.getElementById('scoreA').textContent = `${scores.A || 0}%`;
+            document.getElementById('scoreL').textContent = `${scores.L || 0}%`;
+            document.getElementById('scoreI').textContent = `${scores.I || 0}%`;
+            document.getElementById('scoreD').textContent = `${scores.D || 0}%`;
+            if (awareness) {
+                document.getElementById('scoreAW').textContent = `${awareness.percent || 0}%`;
+            }
+        }
+
+        async function testRawScoring() {
+            log('Testing raw scoring calculation...', 'info');
+            
+            const testAnswers = {
+                // Verity questions (data-driven) - balanced mix
+                "DT-01": 6, "DT-06": 3, "IG-01": 5, "IG-06": 4, "CB-01": 6,
+                // Association questions (relationship-based) - moderate
+                "DT-02": 4, "DT-07": 5, "IG-02": 4, "IG-07": 5, "CB-02": 4,
+                // Lived Experience questions - varied
+                "DT-03": 5, "UP-03": 4, "IG-03": 6, "CB-03": 5, "PD-03": 4,
+                // Institutional questions - moderate to high
+                "DT-04": 6, "UP-04": 5, "IG-04": 6, "CB-04": 5, "PD-04": 5,
+                // Desire questions (future-focused) - lower
+                "DT-05": 3, "UP-05": 4, "IG-05": 3, "CB-05": 4, "PD-05": 3,
+                // Awareness questions - moderate
+                "AW-01": 5, "AW-02": 4, "AW-03": 5, "AW-04": 4, "AW-05": 5, "AW-06": 4, "AW-07": 5
+            };
+            
+            try {
+                const { calculateRawScoresV2 } = await import('./js/scoring.js');
+                const result = calculateRawScoresV2(testAnswers);
+                
+                log(`Raw scores calculated: ${JSON.stringify(result.raw)}`, 'info');
+                log(`Percentages calculated: ${JSON.stringify(result.percent)}`, 'info');
+                
+                // Check for reasonable scores
+                const scores = result.percent;
+                const highScores = Object.entries(scores).filter(([dim, score]) => score > 90);
+                const lowScores = Object.entries(scores).filter(([dim, score]) => score < 10);
+                
+                if (highScores.length > 0) {
+                    log(`WARNING: High scores detected: ${JSON.stringify(highScores)}`, 'warning');
+                } else {
+                    log('All scores are within reasonable range (not too high)', 'good');
+                }
+                
+                if (lowScores.length > 0) {
+                    log(`WARNING: Low scores detected: ${JSON.stringify(lowScores)}`, 'warning');
+                } else {
+                    log('All scores are within reasonable range (not too low)', 'good');
+                }
+                
+                updateScoreDisplay(scores);
+                
+            } catch (error) {
+                log(`Error testing raw scoring: ${error.message}`, 'error');
+            }
+        }
+
+        async function testContextScoring() {
+            log('Testing context scoring...', 'info');
+            
+            const testAnswers = {
+                "DT-01": 6, "DT-06": 3, "IG-01": 5, "IG-06": 4, "CB-01": 6,
+                "DT-02": 4, "DT-07": 5, "IG-02": 4, "IG-07": 5, "CB-02": 4,
+                "DT-03": 5, "UP-03": 4, "IG-03": 6, "CB-03": 5, "PD-03": 4,
+                "DT-04": 6, "UP-04": 5, "IG-04": 6, "CB-04": 5, "PD-04": 5,
+                "DT-05": 3, "UP-05": 4, "IG-05": 3, "CB-05": 4, "PD-05": 3,
+                "AW-01": 5, "AW-02": 4, "AW-03": 5, "AW-04": 4, "AW-05": 5, "AW-06": 4, "AW-07": 5
+            };
+            
+            try {
+                const { calculateContextScores } = await import('./js/scenarios.js');
+                
+                const contexts = ['general', 'work', 'personal'];
+                for (const context of contexts) {
+                    const scores = calculateContextScores(testAnswers, context);
+                    log(`${context} context scores: ${JSON.stringify(scores)}`, 'info');
+                    
+                    const highScores = Object.entries(scores).filter(([dim, score]) => score > 90);
+                    if (highScores.length > 0) {
+                        log(`${context}: High scores detected: ${JSON.stringify(highScores)}`, 'warning');
+                    }
+                }
+                
+                // Show general context scores
+                const generalScores = calculateContextScores(testAnswers, 'general');
+                updateScoreDisplay(generalScores);
+                
+            } catch (error) {
+                log(`Error testing context scoring: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAwarenessScoring() {
+            log('Testing awareness scoring...', 'info');
+            
+            const testAnswers = {
+                "AW-01": 5, "AW-02": 4, "AW-03": 5, "AW-04": 4, "AW-05": 5, "AW-06": 4, "AW-07": 5
+            };
+            
+            try {
+                const { calculateAwarenessScore } = await import('./js/scoring.js');
+                const awareness = calculateAwarenessScore(testAnswers);
+                
+                log(`Awareness score: ${JSON.stringify(awareness)}`, 'info');
+                
+                if (awareness.percent > 90) {
+                    log('WARNING: Awareness score is very high', 'warning');
+                } else if (awareness.percent < 10) {
+                    log('WARNING: Awareness score is very low', 'warning');
+                } else {
+                    log('Awareness score is within reasonable range', 'good');
+                }
+                
+                document.getElementById('scoreAW').textContent = `${awareness.percent}%`;
+                
+            } catch (error) {
+                log(`Error testing awareness scoring: ${error.message}`, 'error');
+            }
+        }
+
+        function clearDebug() {
+            document.getElementById('debugOutput').innerHTML = '';
+            log('Debug output cleared', 'info');
+        }
+
+        // Make functions globally available
+        window.testRawScoring = testRawScoring;
+        window.testContextScoring = testContextScoring;
+        window.testAwarenessScoring = testAwarenessScoring;
+        window.clearDebug = clearDebug;
+        
+        // Auto-run test on load
+        window.addEventListener('load', () => {
+            log('Scoring test page loaded', 'info');
+            setTimeout(testRawScoring, 1000);
+        });
+    </script>
+</body>
+</html> 

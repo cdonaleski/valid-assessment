@@ -74,6 +74,7 @@
                     </div>
                 </div>
                 <button id="startNewAssessment" class="btn secondary">Start New</button>
+                <button id="testScoring" class="btn secondary" style="background: #ff9800;">Test Scoring</button>
             </div>
         </div>
     </header>
@@ -93,12 +94,51 @@
             <h1>Your VALID Assessment Results</h1>
             <p class="description">This analysis provides insights into your decision-making style and preferences across the five VALID dimensions.</p>
 
+            <!-- Data Source Indicator -->
+            <div id="dataSourceIndicator"></div>
+
+            <!-- Scenario Selector -->
+            <div class="scenario-selector">
+                <div class="scenario-header">
+                    <h3>View Results in Different Contexts</h3>
+                    <p>Select a scenario to see how your decision-making style applies in specific situations:</p>
+                </div>
+                <div class="scenario-controls">
+                    <select id="scenarioSelect" class="scenario-dropdown">
+                        <option value="general">🎯 General Decision Making</option>
+                        <option value="work">💼 Work & Professional</option>
+                        <option value="leadership">👥 Leadership & Management</option>
+                        <option value="personal">🏠 Personal & Life</option>
+                        <option value="crisis">⚡ Crisis & High Pressure</option>
+                        <option value="innovation">🚀 Innovation & Change</option>
+                        <option value="collaboration">🤝 Collaboration & Teamwork</option>
+                        <option value="strategic">📊 Strategic Planning</option>
+                    </select>
+                    <div class="scenario-info">
+                        <span id="scenarioDescription">Your overall decision-making style across all contexts</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Profile Section -->
             <div class="profile-section">
                 <div class="chart-section">
                     <h2>Decision-Making Profile</h2>
                     <div class="chart-container">
                         <canvas id="radarChart"></canvas>
+                    </div>
+                    <div class="awareness-section">
+                        <h3>Metacognitive Awareness</h3>
+                        <div class="awareness-score" id="awarenessScoreContainer">
+                            <div class="score-label">
+                                <span>Self-Reflection & Decision Awareness</span>
+                                <span class="score-value" id="awarenessScore">--%</span>
+                            </div>
+                            <div class="score-bar awareness" id="awarenessScoreBar" style="width: 0%"></div>
+                            <p id="awarenessDescription" class="awareness-description">
+                                Your ability to reflect on and understand your own decision-making processes.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -162,7 +202,9 @@
                 </div>
             </div>
 
-            <!-- Dimension Boxes -->
+            <!-- Dimension Boxes Section styled like Validation Insights -->
+            <section class="profile-summary-section">
+                <h2>General Decision Making Profile</h2>
             <div class="dimension-boxes">
                 <div class="dimension-box verity">
                     <h4>Verity</h4>
@@ -190,6 +232,7 @@
                     <p>Future-focused planning</p>
                 </div>
             </div>
+            </section>
 
             <!-- Development Section -->
             <div class="development-section">
@@ -212,27 +255,44 @@
 
             <!-- Actions -->
             <div class="actions">
-                <button id="generateTestData" class="btn secondary">Generate Test Data</button>
+                <button id="generateTestData" class="btn secondary" onclick="resetToTestData()">Reset to Test Data</button>
+                <button id="clearInvalidData" class="btn secondary" onclick="clearInvalidData(); window.location.reload();">Clear Invalid Data</button>
             </div>
         </main>
     </div>
 
     <!-- Load JavaScript -->
-    <script src="/js/results.js"></script>
+    <script type="module" src="/js/results.js"></script>
     <script type="module">
         import { calculateScores } from './js/scoring.js';
         import { generatePDF } from './js/reports.js';
-        import { logger } from './js/logger.js';
+        // import { logger } from './js/logger.js';
+        import { scenarios, getScenarioInsights, calculateContextScores } from './js/scenarios.js';
+        
+        // Make scenarios available globally
+        window.scenarios = scenarios;
+        window.getScenarioInsights = getScenarioInsights;
+        window.calculateContextScores = calculateContextScores;
+        
+        // Test console log to see if JavaScript is working
+        console.log('Results page JavaScript loaded successfully');
         
         // Initialize results page
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded');
             // Wait a moment for results.js to load
             setTimeout(() => {
+                console.log('Checking for initializeResults function...');
                 if (typeof window.initializeResults === 'function') {
                     console.log('Calling initializeResults...');
-                    window.initializeResults();
+                    try {
+                        window.initializeResults();
+                    } catch (error) {
+                        console.error('Error in initializeResults:', error);
+                    }
                 } else {
                     console.error('initializeResults function not found on window object');
+                    console.log('Available window functions:', Object.keys(window).filter(key => typeof window[key] === 'function'));
                 }
             }, 100);
         });

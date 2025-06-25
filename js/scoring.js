@@ -10,7 +10,7 @@
  * - Statistical analysis
  */ 
 
-import { logger } from './logger.js';
+// import { logger } from './logger.js';
 import validAssessmentData from './questions-data.js';
 
 // Import metadata from questions data
@@ -84,6 +84,29 @@ const QUESTION_TYPES = {
     D10: { type: 'D', reverse: false }
 };
 
+// Dimension mapping function to handle both full words and single letters
+function mapDimension(dimension) {
+    const dimensionMap = {
+        // Full word to single letter
+        'verity': 'V',
+        'association': 'A', 
+        'lived': 'L',
+        'institutional': 'I',
+        'desire': 'D',
+        // Single letter (already correct)
+        'V': 'V',
+        'A': 'A',
+        'L': 'L', 
+        'I': 'I',
+        'D': 'D',
+        // Special dimensions
+        'Awareness': 'AW',
+        'attention_check': 'AC',
+        'social_desirability': 'SD'
+    };
+    return dimensionMap[dimension] || dimension;
+}
+
 // Persona definitions with descriptions
 const PERSONAS = {
     V: {
@@ -121,6 +144,122 @@ const SCORING_CONSTANTS = {
     STRAIGHT_LINE_THRESHOLD: 0.8, // 80% same answers
     SD_THRESHOLD: 28 // Social desirability threshold
 };
+
+/**
+ * 1. Raw Score Engine
+ * Calculates raw scores for each VALID dimension (V, A, L, I, D)
+ * Applies reverse scoring, sums items per dimension, and normalizes to percentage
+ */
+export function calculateRawScoresV2(answers) {
+    console.log('=== CALCULATE RAW SCORES V2 DEBUG ===');
+    console.log('Input answers:', answers);
+    console.log('validAssessmentData available:', !!validAssessmentData);
+    console.log('validAssessmentData.questions length:', validAssessmentData?.questions?.length);
+    
+    const dimensions = ['V', 'A', 'L', 'I', 'D'];
+    const scores = { V: 0, A: 0, L: 0, I: 0, D: 0 };
+    const counts = { V: 0, A: 0, L: 0, I: 0, D: 0 };
+
+    Object.entries(answers).forEach(([questionId, value]) => {
+        console.log(`Processing question ${questionId} with value ${value}`);
+        
+        const question = validAssessmentData.questions.find(q => q.id === questionId);
+        if (!question) {
+            console.log(`Question ${questionId} not found in validAssessmentData`);
+            return;
+        }
+        
+        console.log(`Found question:`, question);
+        
+        // Map dimension to single letter code
+        const mappedDimension = mapDimension(question.dimension);
+        console.log(`Mapped dimension: ${question.dimension} -> ${mappedDimension}`);
+        
+        if (!dimensions.includes(mappedDimension)) {
+            console.log(`Dimension ${mappedDimension} not in main dimensions, skipping`);
+            return;
+        }
+        
+        const numValue = typeof value === 'number' ? value : Number(value);
+        const scoreValue = question.reverse ? (8 - numValue) : numValue;
+        
+        console.log(`Scoring: value=${numValue}, reverse=${question.reverse}, scoreValue=${scoreValue}`);
+        
+        scores[mappedDimension] += scoreValue;
+        counts[mappedDimension]++;
+        
+        console.log(`Updated scores for ${mappedDimension}: total=${scores[mappedDimension]}, count=${counts[mappedDimension]}`);
+    });
+
+    console.log('Final scores and counts:', { scores, counts });
+
+    // Normalize to percentage
+    const percentages = {};
+    dimensions.forEach(dim => {
+        if (counts[dim] > 0) {
+            // Calculate average score (1-7 scale)
+            const averageScore = scores[dim] / counts[dim];
+            // Convert to percentage: (average - 1) / 6 * 100
+            // This gives 0% for average of 1, 100% for average of 7
+            percentages[dim] = Math.round(((averageScore - 1) / 6) * 100);
+            console.log(`Dimension ${dim}: average=${averageScore}, percentage=${percentages[dim]}`);
+        } else {
+            percentages[dim] = 0;
+            console.log(`Dimension ${dim}: no questions found, percentage=0`);
+        }
+    });
+    
+    console.log('Final percentages:', percentages);
+    console.log('=== END CALCULATE RAW SCORES V2 DEBUG ===');
+    
+    return { raw: scores, percent: percentages };
+}
+
+/**
+ * 2. Contextual Overlay Calculation
+ * For each context, calculate contextual impact per dimension using weighted sum
+ * contextualScore[dimension] = weighted_sum_of_items_belonging_to_that_dimension / sum_of_weights
+ */
+// Note: calculateContextualScores is now in scenarios.js to avoid circular imports
+// This function has been moved to scenarios.js as calculateContextScores
+
+/**
+ * 3. Awareness Score Calculation
+ * Sums 7 awareness items, applies reverse scoring, normalizes, and flags low awareness
+ */
+export function calculateAwarenessScore(answers) {
+    console.log('calculateAwarenessScore called with answers:', answers);
+    let sum = 0;
+    let count = 0;
+    
+    Object.entries(answers).forEach(([questionId, value]) => {
+        const question = validAssessmentData.questions.find(q => q.id === questionId);
+        if (!question) {
+            console.log('Question not found:', questionId);
+            return;
+        }
+        console.log('Processing question:', { questionId, dimension: question.dimension, value });
+        
+        if (question.dimension !== 'Awareness') {
+            console.log('Skipping non-awareness question:', questionId);
+            return;
+        }
+        
+        const numValue = typeof value === 'number' ? value : Number(value);
+        const scoreValue = question.reverse ? (8 - numValue) : numValue;
+        sum += scoreValue;
+        count++;
+        
+        console.log('Awareness question processed:', { questionId, value: numValue, scoreValue, sum, count });
+    });
+    
+    // Normalize: (score - min) / (max - min) * 100, min=7, max=49
+    let percent = count > 0 ? Math.round(((sum - count) / (6 * count)) * 100) : 0;
+    let flag = percent < 35;
+    
+    console.log('Awareness calculation result:', { sum, count, percent, flag });
+    return { raw: sum, percent, flag };
+}
 
 /**
  * Calculate raw scores for each VALID dimension
@@ -398,22 +537,26 @@ export function calculateScores(answers, startTime) {
                 return;
             }
 
-            // Get dimension key (first letter uppercase)
-            const dimensionKey = question.dimension.charAt(0).toUpperCase();
+            // Map dimension to single letter code
+            const mappedDimension = mapDimension(question.dimension);
+            if (!scores.hasOwnProperty(mappedDimension)) {
+                console.warn('Invalid dimension:', { questionId, mappedDimension });
+                return;
+            }
             
             // Score the answer
             const scoreValue = question.reverse ? (8 - value) : value;
-            scores[dimensionKey].raw += scoreValue;
-            scores[dimensionKey].count++;
+            scores[mappedDimension].raw += scoreValue;
+            scores[mappedDimension].count++;
 
             // Track answer frequency
             answerFrequencies[value] = (answerFrequencies[value] || 0) + 1;
             totalAnswers++;
 
             console.log('Updated scores for dimension:', {
-                dimension: dimensionKey,
-                raw: scores[dimensionKey].raw,
-                count: scores[dimensionKey].count,
+                dimension: mappedDimension,
+                raw: scores[mappedDimension].raw,
+                count: scores[mappedDimension].count,
                 isReversed: question.reverse,
                 originalValue: value,
                 scoreValue: scoreValue
@@ -541,7 +684,7 @@ export function validateAnswer(questionId, value) {
     try {
         const question = validAssessmentData.questions.find(q => q.id === questionId);
         if (!question) {
-            logger.warn('Question not found for validation:', questionId);
+            // logger.warn('Question not found for validation:', questionId);
             return false;
         }
 
@@ -559,7 +702,7 @@ export function validateAnswer(questionId, value) {
 
         return true;
     } catch (error) {
-        logger.error('Error validating answer:', error);
+        // logger.error('Error validating answer:', error);
         return false;
     }
 }
@@ -570,7 +713,8 @@ export {
     convertToPercentages,
     calculateConfidence,
     assignPersona,
-    identifyDevelopmentArea
+    identifyDevelopmentArea,
+    mapDimension
 };
 
 // Determine persona based on scores

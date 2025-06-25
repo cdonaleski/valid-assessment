@@ -47,6 +47,6 @@
     {
       "src": "/(.*)",
       "dest": "simple-server.js"
-    }
+  }
   ]
 } 

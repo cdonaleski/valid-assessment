@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Awareness Score</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .awareness-score {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .score-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .score-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .score-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Awareness Score</h1>
+        
+        <div class="awareness-score" id="awarenessScoreContainer">
+            <h3>Metacognitive Awareness Score</h3>
+            <div class="score-value" id="awarenessScore">--%</div>
+            <div class="score-bar" id="awarenessScoreBar">
+                <div class="fill" style="width: 0%"></div>
+            </div>
+            <p id="awarenessDescription">Your ability to reflect on and understand your own decision-making processes.</p>
+        </div>
+
+        <div class="debug-info" id="debugInfo">
+            <h4>Debug Information:</h4>
+            <div id="debugOutput"></div>
+        </div>
+
+        <button onclick="testAwareness()">Test Awareness Calculation</button>
+        <button onclick="testResultsPage()">Test Results Page Elements</button>
+        <button onclick="clearDebug()">Clear Debug</button>
+    </div>
+
+    <script type="module">
+        function log(message, type = 'info') {
+            const debugOutput = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            debugOutput.appendChild(logEntry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        async function testAwareness() {
+            log('Starting awareness score test...', 'info');
+            
+            try {
+                // Test answers with awareness questions
+                const testAnswers = {
+                    // Regular VALID questions
+                    "DT-01": 7, "DT-06": 2, "IG-01": 6, "IG-06": 3, "CB-01": 7,
+                    "DT-02": 5, "DT-07": 4, "IG-02": 6, "IG-07": 3, "CB-02": 5,
+                    "DT-03": 6, "UP-03": 5, "IG-03": 7, "CB-03": 6, "PD-03": 5,
+                    "DT-04": 7, "UP-04": 6, "IG-04": 7, "CB-04": 7, "PD-04": 6,
+                    "DT-05": 4, "UP-05": 5, "IG-05": 4, "CB-05": 5, "PD-05": 4,
+                    // Awareness questions
+                    "AW-01": 6, "AW-02": 5, "AW-03": 6, "AW-04": 3, "AW-05": 5, "AW-06": 6, "AW-07": 4
+                };
+                
+                log(`Test answers prepared: ${Object.keys(testAnswers).length} questions`, 'info');
+                log(`Awareness questions: ${Object.keys(testAnswers).filter(k => k.startsWith('AW-')).join(', ')}`, 'info');
+                
+                // Import and test awareness calculation
+                const { calculateAwarenessScore } = await import('./js/scoring.js');
+                log('Successfully imported calculateAwarenessScore function', 'success');
+                
+                const awareness = calculateAwarenessScore(testAnswers);
+                log(`Awareness score calculated: ${JSON.stringify(awareness)}`, 'success');
+                
+                // Update UI
+                const awarenessScoreEl = document.getElementById('awarenessScore');
+                const awarenessScoreBar = document.getElementById('awarenessScoreBar');
+                const awarenessDescription = document.getElementById('awarenessDescription');
+                
+                log('UI elements found:', 'info');
+                log(`awarenessScoreEl: ${!!awarenessScoreEl}`, 'info');
+                log(`awarenessScoreBar: ${!!awarenessScoreBar}`, 'info');
+                log(`awarenessDescription: ${!!awarenessDescription}`, 'info');
+                
+                if (awarenessScoreEl) {
+                    awarenessScoreEl.textContent = `${awareness.percent}%`;
+                    log(`Updated awareness score element to: ${awareness.percent}%`, 'success');
+                } else {
+                    log('Awareness score element not found!', 'error');
+                }
+                
+                if (awarenessScoreBar) {
+                    const fill = awarenessScoreBar.querySelector('.fill');
+                    if (fill) {
+                        fill.style.width = `${awareness.percent}%`;
+                        log(`Updated awareness score bar to: ${awareness.percent}%`, 'success');
+                    } else {
+                        log('Awareness score bar fill element not found!', 'error');
+                    }
+                } else {
+                    log('Awareness score bar element not found!', 'error');
+                }
+                
+                if (awarenessDescription) {
+                    let description = 'Your ability to reflect on and understand your own decision-making processes.';
+                    if (awareness.flag) {
+                        description += ' Consider developing greater self-awareness in your decision-making approach.';
+                    } else {
+                        description += ' You demonstrate good metacognitive awareness in your decision-making.';
+                    }
+                    awarenessDescription.textContent = description;
+                    log(`Updated awareness description: ${description}`, 'success');
+                } else {
+                    log('Awareness description element not found!', 'error');
+                }
+                
+            } catch (error) {
+                log(`Error testing awareness: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        async function testResultsPage() {
+            log('Testing results page elements...', 'info');
+            
+            // Check if we can access the results page
+            try {
+                const response = await fetch('./results.html');
+                if (response.ok) {
+                    const html = await response.text();
+                    log('Successfully loaded results.html', 'success');
+                    
+                    // Check for awareness elements
+                    const hasAwarenessScore = html.includes('id="awarenessScore"');
+                    const hasAwarenessScoreBar = html.includes('id="awarenessScoreBar"');
+                    const hasAwarenessDescription = html.includes('id="awarenessDescription"');
+                    
+                    log(`Awareness elements in results.html:`, 'info');
+                    log(`awarenessScore: ${hasAwarenessScore}`, hasAwarenessScore ? 'success' : 'error');
+                    log(`awarenessScoreBar: ${hasAwarenessScoreBar}`, hasAwarenessScoreBar ? 'success' : 'error');
+                    log(`awarenessDescription: ${hasAwarenessDescription}`, hasAwarenessDescription ? 'success' : 'error');
+                    
+                } else {
+                    log(`Failed to load results.html: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Error testing results page: ${error.message}`, 'error');
+            }
+        }
+
+        function clearDebug() {
+            document.getElementById('debugOutput').innerHTML = '';
+            log('Debug output cleared', 'info');
+        }
+
+        // Make functions globally available
+        window.testAwareness = testAwareness;
+        window.testResultsPage = testResultsPage;
+        window.clearDebug = clearDebug;
+        
+        // Auto-run test on load
+        window.addEventListener('load', () => {
+            log('Debug page loaded, running initial test...', 'info');
+            setTimeout(testAwareness, 1000);
+        });
+    </script>
+</body>
+</html> 
