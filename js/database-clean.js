@@ -1,4 +1,4 @@
-import { initializeSupabase } from './supabase-client.js';
+import { initializeSupabase, getCurrentUserId } from './supabase-client.js';
 import { logger } from './logger.js';
 import supabaseClient from './supabase-client.js';
 
@@ -314,9 +314,21 @@ export default {
                 }
             }
 
+            // Get user_id from Supabase Auth if available
+            let user_id = null;
+            if (getCurrentUserId) {
+                const maybePromise = getCurrentUserId();
+                if (maybePromise && typeof maybePromise.then === 'function') {
+                    user_id = await maybePromise;
+                } else {
+                    user_id = maybePromise;
+                }
+            }
+            const dataWithUser = user_id ? { ...data, user_id } : data;
+
             const { data: assessment, error } = await state.supabase
                 .from('assessments')
-                .insert(data)
+                .insert(dataWithUser)
                 .select()
                 .single();
 
@@ -328,7 +340,7 @@ export default {
         }
     },
 
-    async saveResults(session_id, scores, completion_data) {
+    async saveResults(assessment_id, scores, completion_data) {
         try {
             if (!state.supabase) {
                 await initializeDatabase();
@@ -340,16 +352,12 @@ export default {
             const { error } = await state.supabase
                 .from('assessments')
                 .update({
-                    verity_score: scores.verity,
-                    association_score: scores.association,
-                    lived_score: scores.lived,
-                    institutional_score: scores.institutional,
-                    desire_score: scores.desire,
+                    scores: scores,
                     completed_at: new Date().toISOString(),
                     duration_minutes: completion_data.duration_minutes,
                     status: 'completed'
                 })
-                .eq('session_id', session_id);
+                .eq('id', assessment_id);
 
             if (error) throw error;
         } catch (error) {
@@ -358,7 +366,7 @@ export default {
         }
     },
 
-    async getAssessment(session_id) {
+    async getAssessment(assessment_id) {
         try {
             if (!state.supabase) {
                 await initializeDatabase();
@@ -370,7 +378,7 @@ export default {
             const { data, error } = await state.supabase
                 .from('assessments')
                 .select('*')
-                .eq('session_id', session_id)
+                .eq('id', assessment_id)
                 .single();
 
             if (error) throw error;
@@ -404,7 +412,7 @@ export default {
         }
     },
 
-    async validateSession(session_id) {
+    async validateSession(assessment_id) {
         try {
             if (!state.supabase) {
                 await initializeDatabase();
@@ -416,7 +424,7 @@ export default {
             const { data, error } = await state.supabase
                 .from('assessments')
                 .select('status')
-                .eq('session_id', session_id)
+                .eq('id', assessment_id)
                 .single();
 
             if (error) throw error;

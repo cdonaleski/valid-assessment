@@ -69,6 +69,9 @@ async function initializeApp() {
         // Store controller instance globally
         window.assessmentController = controller;
         
+        // Also expose assessment manager globally for backward compatibility
+        window.assessmentManager = controller.assessmentManager;
+        
         // Verify initialization
         if (!controller.state.isInitialized) {
             throw new Error('Controller failed to initialize properly');
@@ -113,6 +116,11 @@ async function initializeApp() {
                 }
             }
         });
+        
+        // Trigger a custom event to notify that initialization is complete
+        window.dispatchEvent(new CustomEvent('assessmentControllerReady', {
+            detail: { controller }
+        }));
     } catch (error) {
         logger.error('Failed to initialize application:', {
             error: error.message,

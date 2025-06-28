@@ -11,6 +11,40 @@ import sessionManager from './session-manager.js';
 const { supabase, isOnline } = database;
 import { calculateScores, validateAnswer } from './scoring.js';
 
+// Helper: Check if user is logged in (real or demo)
+function isUserLoggedIn() {
+    // Check for Supabase Auth user or demo user in localStorage
+    const demoUser = localStorage.getItem('demoUser');
+    if (demoUser) return true;
+    if (window.supabase && window.supabase.auth) {
+        const user = window.supabase.auth.getUser && window.supabase.auth.getUser();
+        if (user && user.id) return true;
+    }
+    return false;
+}
+
+function isDemoUser() {
+    return !!localStorage.getItem('demoUser');
+}
+
+// Helper: Check if user is a team admin
+function isTeamAdmin(user) {
+    return user && user.team_role === 'admin';
+}
+
+// Helper: Check if user is a super admin
+function isSuperAdmin(user) {
+    return user && user.role === 'super_admin';
+}
+
+// Helper: Check if a profile field is editable by the user
+function canEditProfileField(user, field) {
+    if (!user) return false;
+    if (user.synced_from_hris && !isSuperAdmin(user)) return false;
+    if (user.team_id && ['job_title', 'department', 'location'].includes(field)) return false;
+    return true;
+}
+
 class AssessmentManager {
     constructor() {
         // Storage keys
@@ -27,6 +61,21 @@ class AssessmentManager {
         
         // Handle page unload
         window.addEventListener('beforeunload', this.handleSessionEnd.bind(this));
+        
+        // Initialize questions on construction
+        this.initializeQuestions();
+    }
+
+    async initializeQuestions() {
+        try {
+            await this.loadQuestions();
+            logger.debug('Questions initialized in constructor:', {
+                questionsLength: this.questions?.length,
+                firstQuestion: this.questions?.[0]?.text
+            });
+        } catch (error) {
+            logger.error('Failed to initialize questions in constructor:', error);
+        }
     }
 
     handleSessionEnd(event) {
@@ -45,7 +94,20 @@ class AssessmentManager {
             // Use the already imported questions data
             // Version: 2024-01-15 - Fixed for Vercel deployment
             // DEPLOYMENT TEST: This should load questions from module, not JSON file
+            logger.debug('Loading questions from validAssessmentData:', {
+                hasValidAssessmentData: !!validAssessmentData,
+                hasQuestions: !!validAssessmentData?.questions,
+                questionsLength: validAssessmentData?.questions?.length,
+                firstQuestion: validAssessmentData?.questions?.[0]?.text
+            });
+            
             this.questions = validAssessmentData.questions;
+            
+            logger.debug('Questions loaded into assessment manager:', {
+                questionsLength: this.questions?.length,
+                firstQuestion: this.questions?.[0]?.text
+            });
+            
             return this.questions;
         } catch (error) {
             logger.error('Failed to load questions:', error);
@@ -60,11 +122,34 @@ class AssessmentManager {
     }
 
     async saveProgress(state) {
+        logger.debug('saveProgress called with state:', { 
+            hasState: !!state,
+            hasDemographics: !!state?.demographics,
+            hasEmail: !!state?.demographics?.email,
+            email: state?.demographics?.email,
+            hasAnswers: !!state?.answers,
+            answersCount: state?.answers ? Object.keys(state.answers).length : 0,
+            isLoggedIn: isUserLoggedIn(),
+            isDemoUser: isDemoUser()
+        });
+        
+        if (!isUserLoggedIn()) {
+            logger.warn('User not logged in, showing sign-in prompt');
+            // Show sign-in modal instead of alert
+            this.showSignInPrompt();
+            throw new Error('User not logged in');
+        }
+        
         try {
             if (!state || !state.demographics?.email) {
+                logger.error('Invalid state or missing email:', { 
+                    hasState: !!state, 
+                    hasDemographics: !!state?.demographics,
+                    email: state?.demographics?.email 
+                });
                 throw new Error('Invalid state or missing email');
             }
-
+            
             const token = this.generateToken(state.demographics.email);
             const progress = {
                 token,
@@ -72,27 +157,178 @@ class AssessmentManager {
                 timestamp: Date.now(),
                 expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
                 state: {
-                    currentQuestion: state.currentQuestion || 0,
+                    currentQuestion: state.currentQuestionIndex || state.currentQuestion || 0,
                     answers: state.answers || [],
                     demographics: state.demographics,
                     startTime: state.startTime
                 }
             };
-
+            
+            logger.debug('Generated progress data:', { token, email: progress.email });
+            
             // Get existing progress data
             const existingData = JSON.parse(localStorage.getItem(this.STORAGE_KEYS.PROGRESS) || '{}');
-            
             // Add new progress
             existingData[token] = progress;
-            
             // Save back to storage
             localStorage.setItem(this.STORAGE_KEYS.PROGRESS, JSON.stringify(existingData));
             
+            logger.debug('Progress saved to localStorage:', { 
+                token, 
+                existingTokens: Object.keys(existingData).length 
+            });
+            
+            // Also save to database if online
+            if (database.isOnline()) {
+                try {
+                    await database.createAssessment({
+                        email: state.demographics.email,
+                        demographics: state.demographics,
+                        status: 'in_progress',
+                        current_question: state.currentQuestionIndex || state.currentQuestion || 0,
+                        answers: state.answers || {},
+                        created_at: new Date().toISOString()
+                    });
+                    logger.info('Progress also saved to database');
+                } catch (dbError) {
+                    logger.warn('Failed to save to database:', dbError);
+                }
+            } else {
+                logger.debug('Database offline, saved to localStorage only');
+            }
+            
             logger.info('Progress saved successfully', { token });
+            if (typeof window.showInProgressIndicator === 'function') {
+                window.showInProgressIndicator(true);
+            }
             return token;
         } catch (error) {
             logger.error('Failed to save progress:', error);
             throw error;
+        }
+    }
+
+    // Show sign-in prompt modal
+    showSignInPrompt() {
+        const modal = document.createElement('div');
+        modal.className = 'signin-modal';
+        modal.innerHTML = `
+            <div class="signin-modal-content">
+                <h3>Sign In Required</h3>
+                <p>You need to sign in to save your progress and access your results.</p>
+                <div class="signin-options">
+                    <button class="btn btn-primary" onclick="window.location.href='/dashboard.html'">
+                        Go to Dashboard
+                    </button>
+                    <button class="btn btn-secondary" onclick="this.closest('.signin-modal').remove()">
+                        Continue Without Saving
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 10000);
+    }
+
+    // Check if user has incomplete assessment
+    async hasIncompleteAssessment(email) {
+        if (!email) return false;
+        
+        try {
+            // Check database first
+            if (database.isOnline()) {
+                const { data, error } = await database.supabase()
+                    .from('assessments')
+                    .select('id, status, current_question, created_at')
+                    .eq('email', email)
+                    .eq('status', 'in_progress')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                if (!error && data && data.length > 0) {
+                    return data[0];
+                }
+            }
+            
+            // Check local storage as fallback
+            const savedData = JSON.parse(localStorage.getItem(this.STORAGE_KEYS.PROGRESS) || '{}');
+            for (const [token, progress] of Object.entries(savedData)) {
+                if (progress.email.toLowerCase() === email.toLowerCase() && 
+                    progress.expiresAt > Date.now()) {
+                    return { token, ...progress.state };
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            logger.error('Error checking incomplete assessment:', error);
+            return false;
+        }
+    }
+
+    // Auto-save progress periodically
+    startAutoSave() {
+        logger.info('Starting auto-save with 30-second interval');
+        if (typeof window.showAutoSaveIndicator === 'function') {
+            window.showAutoSaveIndicator(true);
+        }
+        this.autoSaveInterval = setInterval(async () => {
+            try {
+                const state = stateManager.getState();
+                logger.debug('Auto-save check - State:', { 
+                    hasState: !!state, 
+                    isInitialized: state?.isInitialized,
+                    hasDemographics: !!state?.demographics,
+                    hasAnswers: !!state?.answers,
+                    answersCount: state?.answers ? Object.keys(state.answers).length : 0,
+                    isLoggedIn: isUserLoggedIn()
+                });
+                
+                // Check if we have a valid state to save
+                if (state && 
+                    state.demographics && 
+                    state.demographics.email && 
+                    isUserLoggedIn()) {
+                    
+                    // Only save if we have some progress (answers or current question > 0)
+                    const hasProgress = (state.answers && Object.keys(state.answers).length > 0) || 
+                                      (state.currentQuestion && state.currentQuestion > 0) ||
+                                      (state.currentQuestionIndex && state.currentQuestionIndex > 0);
+                    
+                    if (hasProgress) {
+                        logger.info('Auto-save: Saving progress...');
+                        await this.saveProgress(state);
+                        logger.info('Auto-save: Progress saved successfully');
+                        if (typeof window.showInProgressIndicator === 'function') {
+                            window.showInProgressIndicator(true);
+                        }
+                    } else {
+                        logger.debug('Auto-save: No progress to save yet');
+                    }
+                } else {
+                    logger.debug('Auto-save: Conditions not met for saving', {
+                        hasState: !!state,
+                        hasDemographics: !!state?.demographics,
+                        hasEmail: !!state?.demographics?.email,
+                        isLoggedIn: isUserLoggedIn()
+                    });
+                }
+            } catch (error) {
+                logger.warn('Auto-save failed:', error);
+            }
+        }, 30000); // Save every 30 seconds
+    }
+
+    stopAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
         }
     }
 
@@ -146,8 +382,11 @@ class AssessmentManager {
     }
 
     async resumeAssessment(token, email) {
+            logger.debug('resumeAssessment called with:', { token, email });
         try {
             const state = await this.loadProgress(token, email);
+            logger.debug('Loaded progress state:', { state });
+            logger.debug('Setting state in stateManager:', { state });
             await stateManager.setState(state);
             return true;
         } catch (error) {
@@ -178,6 +417,12 @@ class AssessmentManager {
 
                 // Load and validate questions first
                 await this.loadQuestions();
+                logger.debug('Questions loaded in startAssessment:', {
+                    questionsLength: this.questions?.length,
+                    firstQuestion: this.questions?.[0]?.text,
+                    hasQuestions: !!this.questions
+                });
+                
                 if (!this.questions || this.questions.length === 0) {
                     logger.error('No questions available after loading');
                     throw new Error('Failed to load assessment questions');
@@ -191,6 +436,12 @@ class AssessmentManager {
                     questions: this.questions,
                     status: 'in_progress'
                 };
+
+                logger.debug('Assessment state created:', {
+                    assessmentId: assessmentState.id,
+                    questionsInState: assessmentState.questions?.length,
+                    firstQuestionInState: assessmentState.questions?.[0]?.text
+                });
 
                 // Save assessment state and start session
                 try {
@@ -284,9 +535,30 @@ class AssessmentManager {
                 return null;
             }
 
-            if (!state.questions || !Array.isArray(state.questions) || state.questions.length === 0) {
-                logger.error('No questions available in state');
+            // Ensure questions are loaded
+            if (!this.questions || this.questions.length === 0) {
+                logger.warn('No questions in manager, attempting to load...');
+                this.loadQuestions().catch(error => {
+                    logger.error('Failed to load questions in getCurrentQuestion:', error);
+                });
                 return null;
+            }
+
+            if (!state.questions || !Array.isArray(state.questions) || state.questions.length === 0) {
+                logger.warn('No questions in state, using manager questions as fallback');
+                // Use manager questions as fallback
+                if (!state.currentQuestionIndex && state.currentQuestionIndex !== 0) {
+                    logger.error('No current question index in state');
+                    return null;
+                }
+                if (state.currentQuestionIndex < 0 || state.currentQuestionIndex >= this.questions.length) {
+                    logger.error('Invalid question index:', {
+                        index: state.currentQuestionIndex,
+                        totalQuestions: this.questions.length
+                    });
+                    return null;
+                }
+                return this.questions[state.currentQuestionIndex];
             }
 
             if (typeof state.currentQuestionIndex !== 'number' || 
@@ -313,7 +585,7 @@ class AssessmentManager {
                 index: state.currentQuestionIndex,
                 questionId: question.id,
                 totalQuestions: state.questions.length,
-                answersCount: Object.keys(state.answers).length
+                answersCount: Object.keys(state.answers || {}).length
             });
 
             return question;

@@ -39,8 +39,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
     
     <!-- JavaScript Modules -->
+    <script src="./js/assessment-state-manager.js"></script>
     <script type="module" src="./js/app.js?v=2024-01-15-v3"></script>
-    <script type="module" src="./js/assessment-controller.js?v=2024-01-15-v3"></script>
+    <script type="module" src="./js/assessment-controller.js?v=2024-01-15-v4"></script>
     <script type="module" src="./js/event-handlers.js?v=2024-01-15-v3"></script>
     <script type="module" src="./js/scoring.js?v=2024-01-15-v3"></script>
     <script type="module" src="./js/state-manager.js?v=2024-01-15-v3"></script>
@@ -48,6 +49,211 @@
     <script type="module" src="./js/main.js?v=2024-01-15-v3"></script>
     <script type="module" src="./js/logger.js?v=2024-01-15-v3"></script>
     <script type="module" src="./js/version-manager.js?v=2024-01-15-v3"></script>
+    
+    <!-- Assessment Resume and Auto-save Script -->
+    <script>
+        // Check for in-progress assessment
+        function checkForInProgressAssessment() {
+            if (window.assessmentStateManager && typeof window.assessmentStateManager.hasIncompleteAssessment === 'function') {
+                return window.assessmentStateManager.hasIncompleteAssessment();
+            }
+            return false;
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            
+            // Update demo button visibility
+            updateDemoButtonVisibility();
+            
+            // Check for in-progress assessment
+            if (checkForInProgressAssessment()) {
+                showInProgressIndicator(true);
+            }
+            
+            // If user is logged in, show auto-save indicator
+            const demoUser = localStorage.getItem('demoUser');
+            const isLoggedIn = demoUser || (window.supabase && window.supabase.auth && window.supabase.auth.getUser);
+            if (isLoggedIn) {
+                showAutoSaveIndicator(true);
+            }
+
+            // Check for resume flag from dashboard
+            if (window.assessmentStateManager && window.assessmentStateManager.checkResumeFlag()) {
+                console.log('Resume flag detected, attempting to resume assessment...');
+                // The assessment controller will handle the resume automatically
+                // when it initializes
+            }
+            
+            // Initialize auto-save if user is logged in
+            setTimeout(() => {
+                initializeAutoSave();
+                updateWelcomeButtons();
+            }, 2000); // Wait for modules to load
+        });
+        
+        // Update demo button visibility based on login status
+        function updateDemoButtonVisibility() {
+            const demoUser = localStorage.getItem('demoUser');
+            const demoLoginBtn = document.getElementById('demoLoginBtn');
+            const demoLogoutBtn = document.getElementById('demoLogoutBtn');
+            
+            if (demoUser) {
+                demoLoginBtn.style.display = 'none';
+                demoLogoutBtn.style.display = 'inline-flex';
+            } else {
+                demoLoginBtn.style.display = 'inline-flex';
+                demoLogoutBtn.style.display = 'none';
+            }
+        }
+        
+        // Initialize auto-save functionality
+        async function initializeAutoSave() {
+            try {
+                // Check if user is logged in (demo or real)
+                const demoUser = localStorage.getItem('demoUser');
+                const isLoggedIn = demoUser || (window.supabase && window.supabase.auth && window.supabase.auth.getUser);
+                
+                if (isLoggedIn) {
+                    console.log('User is logged in, waiting for assessment controller...');
+                    
+                    // Listen for the assessment controller ready event
+                    window.addEventListener('assessmentControllerReady', function(event) {
+                        const controller = event.detail.controller;
+                        if (controller && controller.assessmentManager) {
+                            controller.assessmentManager.startAutoSave();
+                            console.log('Auto-save initialized via controller');
+                            showAutoSaveIndicator(true);
+                        }
+                    });
+                    
+                    // Also check if controller is already available (fallback)
+                    if (window.assessmentController && window.assessmentController.assessmentManager) {
+                        window.assessmentController.assessmentManager.startAutoSave();
+                        console.log('Auto-save initialized via controller (already available)');
+                        showAutoSaveIndicator(true);
+                    }
+                } else {
+                    console.log('User not logged in, auto-save disabled');
+                }
+            } catch (error) {
+                console.error('Error initializing auto-save:', error);
+            }
+        }
+        
+        // Show/hide auto-save indicator
+        function showAutoSaveIndicator(show) {
+            const indicator = document.getElementById('autoSaveIndicator');
+            if (indicator) {
+                indicator.style.display = show ? 'inline' : 'none';
+            }
+        }
+        
+        // Show/hide in-progress indicator
+        function showInProgressIndicator(show) {
+            const indicator = document.getElementById('inProgressIndicator');
+            if (indicator) {
+                indicator.style.display = show ? 'inline' : 'none';
+            }
+        }
+        
+        // Make indicator functions globally available
+        window.showAutoSaveIndicator = showAutoSaveIndicator;
+        window.showInProgressIndicator = showInProgressIndicator;
+        
+        // Demo login function (for testing)
+        window.demoLogin = function() {
+            localStorage.setItem('demoUser', JSON.stringify({
+                id: 'demo-user-123',
+                email: 'demo@validatedmind.com',
+                name: 'Demo User',
+                timestamp: Date.now()
+            }));
+            console.log('Demo user logged in');
+            updateDemoButtonVisibility();
+            showAutoSaveIndicator(true);
+            // Reinitialize auto-save after login
+            setTimeout(() => initializeAutoSave(), 1000);
+        };
+        
+        // Demo logout function
+        window.demoLogout = function() {
+            localStorage.removeItem('demoUser');
+            console.log('Demo user logged out');
+            updateDemoButtonVisibility();
+            showAutoSaveIndicator(false);
+            // Stop auto-save when logging out
+            if (window.assessmentController && window.assessmentController.assessmentManager) {
+                window.assessmentController.assessmentManager.stopAutoSave();
+            }
+        };
+        
+        // Manual test function for debugging auto-save
+        window.testAutoSave = function() {
+            console.log('=== Auto-Save Test ===');
+            console.log('Demo user:', localStorage.getItem('demoUser'));
+            console.log('Assessment controller:', window.assessmentController);
+            console.log('Assessment manager:', window.assessmentController?.assessmentManager);
+            console.log('State manager state:', window.assessmentController?.stateManager?.getState());
+            
+            if (window.assessmentController?.assessmentManager) {
+                const state = window.assessmentController.stateManager.getState();
+                if (state && state.demographics?.email) {
+                    console.log('Testing manual save...');
+                    window.assessmentController.assessmentManager.saveProgress(state)
+                        .then(token => console.log('Manual save successful:', token))
+                        .catch(error => console.error('Manual save failed:', error));
+                } else {
+                    console.log('No valid state to save - demographics missing');
+                    console.log('Current state:', state);
+                }
+            } else {
+                console.log('Assessment manager not available');
+                console.log('Controller state:', {
+                    hasController: !!window.assessmentController,
+                    hasManager: !!window.assessmentController?.assessmentManager,
+                    controllerKeys: window.assessmentController ? Object.keys(window.assessmentController) : []
+                });
+            }
+        };
+        
+        // Update welcome section buttons based on assessment status
+        function updateWelcomeButtons() {
+            const startButton = document.getElementById('startAssessment');
+            const resumeButton = document.getElementById('resumeAssessment');
+            
+            if (!startButton || !resumeButton) return;
+            
+            // Check for in-progress assessment
+            const hasInProgress = checkForInProgressAssessment();
+            
+            if (hasInProgress) {
+                // Show resume option prominently
+                startButton.textContent = 'Start New Assessment';
+                startButton.className = 'btn btn-secondary';
+                resumeButton.textContent = 'Resume Assessment';
+                resumeButton.className = 'btn btn-primary';
+                resumeButton.style.display = 'inline-block';
+                
+                // Add click handler for resume
+                resumeButton.onclick = function() {
+                    window.location.reload(); // This will trigger auto-resume
+                };
+                
+                // Show in-progress indicator
+                showInProgressIndicator(true);
+            } else {
+                // Show start option prominently
+                startButton.textContent = 'Start Assessment';
+                startButton.className = 'btn btn-primary';
+                resumeButton.style.display = 'none';
+                
+                // Hide in-progress indicator
+                showInProgressIndicator(false);
+            }
+        }
+    </script>
 </head>
 <body>
     <!-- Version Indicator -->
@@ -75,15 +281,37 @@
                 <img src="./img/TVM_ Logo_L.png" alt="The Validated Mind Research Lab Logo" class="header-logo">
             </div>
             <div class="header-right">
-                <button id="saveProgressBtn" class="btn btn-secondary">
-                    Save Progress
-                </button>
-                <div class="token-display-container">
-                    <input type="text" id="headerProgressToken" readonly placeholder="Progress Token" class="token-input">
-                    <button id="headerCopyToken" class="btn btn-icon" title="Copy to clipboard">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M13 0H6C4.9 0 4 0.9 4 2V3H2C0.9 3 0 3.9 0 5V14C0 15.1 0.9 16 2 16H9C10.1 16 11 15.1 11 14V13H13C14.1 13 15 12.1 15 11V2C15 0.9 14.1 0 13 0ZM9 14H2V5H9V14ZM13 11H11V5C11 3.9 10.1 3 9 3H6V2H13V11Z" fill="currentColor"/>
-                        </svg>
+                <!-- Demo Login/Logout Group -->
+                <div class="button-group" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+                    <button id="demoLoginBtn" class="btn btn-outline" onclick="demoLogin()">
+                        <i class="fas fa-user"></i>
+                        <span>Demo Login</span>
+                    </button>
+                    <button id="demoLogoutBtn" class="btn btn-outline" style="display: none;" onclick="demoLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Demo Logout</span>
+                    </button>
+                </div>
+                
+                <!-- Navigation Group -->
+                <div class="button-group" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+                    <button id="goToDashboardBtn" class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+                        <i class="fas fa-th-large"></i>
+                        <span>Dashboard</span>
+                    </button>
+                </div>
+                
+                <!-- Save Progress Group -->
+                <div class="button-group" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+                    <button id="saveProgressBtn" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        <span>Save Progress</span>
+                        <span id="autoSaveIndicator" class="indicator success" style="display: none;">
+                            <i class="fas fa-check-circle"></i> Auto-save active
+                        </span>
+                        <span id="inProgressIndicator" class="indicator warning" style="display: none;">
+                            <i class="fas fa-clock"></i> In Progress
+                        </span>
                     </button>
                 </div>
             </div>
@@ -222,7 +450,7 @@
 
                     <div class="form-group">
                         <label for="email">4. Email Address</label>
-                        <input type="email" id="email" name="email" required placeholder="your@email.com">
+                        <input type="email" id="email" name="email" required placeholder="your@email.com" class="profile-input">
                         <small>Required for sending your results</small>
                         <div class="error-message" id="emailError"></div>
                     </div>
@@ -312,7 +540,7 @@
                         </div>
                         <div class="navigation-buttons">
                             <button id="prevQuestion" class="btn btn-secondary">« Previous</button>
-                            <button id="nextQuestion" class="btn btn-primary">Next »</button>
+                            <button id="nextQuestion" class="btn btn-primary" disabled>Next »</button>
                         </div>
                     </div>
                 </div>
@@ -429,10 +657,9 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <script type="module">
-        // Debug logging
-        console.log('Index page loaded');
-    </script>
+    
+    <!-- Main Application Script -->
+    <script type="module" src="js/main.js"></script>
 
     <!-- Development Tools - Load Last -->
     <script>

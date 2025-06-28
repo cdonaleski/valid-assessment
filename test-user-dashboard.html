@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test User Dashboard | VALID Assessment</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/mobile.css">
+    <style>
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .test-success { background: #d1fae5; color: #065f46; }
+        .test-error { background: #fee2e2; color: #991b1b; }
+        .test-info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="content-card">
+            <h1>Test User Dashboard & User-Linked Assessments</h1>
+            
+            <div class="test-section">
+                <h2>1. Environment Check</h2>
+                <div id="envCheck"></div>
+            </div>
+
+            <div class="test-section">
+                <h2>2. Supabase Connection</h2>
+                <div id="connectionCheck"></div>
+            </div>
+
+            <div class="test-section">
+                <h2>3. Authentication Test</h2>
+                <div id="authTest">
+                    <button class="btn" onclick="testAuth()">Test Auth</button>
+                    <div id="authResult"></div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2>4. Assessment Creation Test</h2>
+                <div id="assessmentTest">
+                    <button class="btn" onclick="testAssessmentCreation()">Create Test Assessment</button>
+                    <div id="assessmentResult"></div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2>5. Dashboard Access Test</h2>
+                <div id="dashboardTest">
+                    <button class="btn" onclick="testDashboardAccess()">Test Dashboard Access</button>
+                    <div id="dashboardResult"></div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2>6. RLS Policy Test</h2>
+                <div id="rlsTest">
+                    <button class="btn" onclick="testRLS()">Test RLS Policies</button>
+                    <div id="rlsResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
+        
+        const SUPABASE_URL = window.__env__?.SUPABASE_URL || 'https://txqtbblkrqmydkjztaip.supabase.co';
+        const SUPABASE_ANON_KEY = window.__env__?.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Test functions
+        window.testAuth = async function() {
+            const resultDiv = document.getElementById('authResult');
+            resultDiv.innerHTML = '<div class="test-info">Testing authentication...</div>';
+            
+            try {
+                // Test signup
+                const testEmail = `test-${Date.now()}@example.com`;
+                const testPassword = 'testpassword123';
+                
+                const { data: signupData, error: signupError } = await supabase.auth.signUp({
+                    email: testEmail,
+                    password: testPassword
+                });
+                
+                if (signupError) {
+                    resultDiv.innerHTML = `<div class="test-error">Signup failed: ${signupError.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML = `<div class="test-success">Signup successful for ${testEmail}</div>`;
+                
+                // Test signin
+                const { data: signinData, error: signinError } = await supabase.auth.signInWithPassword({
+                    email: testEmail,
+                    password: testPassword
+                });
+                
+                if (signinError) {
+                    resultDiv.innerHTML += `<div class="test-error">Signin failed: ${signinError.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML += `<div class="test-success">Signin successful. User ID: ${signinData.user.id}</div>`;
+                
+                // Store test credentials for other tests
+                window.testCredentials = { email: testEmail, password: testPassword, userId: signinData.user.id };
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-error">Auth test failed: ${error.message}</div>`;
+            }
+        };
+
+        window.testAssessmentCreation = async function() {
+            const resultDiv = document.getElementById('assessmentResult');
+            resultDiv.innerHTML = '<div class="test-info">Testing assessment creation...</div>';
+            
+            try {
+                if (!window.testCredentials) {
+                    resultDiv.innerHTML = '<div class="test-error">Please run auth test first</div>';
+                    return;
+                }
+                
+                // Create test assessment
+                const testAssessment = {
+                    email: window.testCredentials.email,
+                    demographics: {
+                        department: 'Test Department',
+                        role: 'Test Role',
+                        experience: '1-3 years'
+                    },
+                    status: 'in_progress',
+                    answers: {},
+                    created_at: new Date().toISOString()
+                };
+                
+                const { data: assessment, error } = await supabase
+                    .from('assessments')
+                    .insert(testAssessment)
+                    .select()
+                    .single();
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="test-error">Assessment creation failed: ${error.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML = `<div class="test-success">Assessment created successfully. ID: ${assessment.id}</div>`;
+                
+                // Check if user_id was set
+                if (assessment.user_id) {
+                    resultDiv.innerHTML += `<div class="test-success">User ID correctly set: ${assessment.user_id}</div>`;
+                } else {
+                    resultDiv.innerHTML += `<div class="test-error">User ID not set!</div>`;
+                }
+                
+                window.testAssessmentId = assessment.id;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-error">Assessment creation test failed: ${error.message}</div>`;
+            }
+        };
+
+        window.testDashboardAccess = async function() {
+            const resultDiv = document.getElementById('dashboardResult');
+            resultDiv.innerHTML = '<div class="test-info">Testing dashboard access...</div>';
+            
+            try {
+                if (!window.testCredentials) {
+                    resultDiv.innerHTML = '<div class="test-error">Please run auth test first</div>';
+                    return;
+                }
+                
+                // Fetch user's assessments
+                const { data: assessments, error } = await supabase
+                    .from('assessments')
+                    .select('*')
+                    .eq('user_id', window.testCredentials.userId);
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="test-error">Dashboard access failed: ${error.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML = `<div class="test-success">Dashboard access successful. Found ${assessments.length} assessments</div>`;
+                
+                if (assessments.length > 0) {
+                    resultDiv.innerHTML += `<div class="test-info">Latest assessment: ${assessments[0].email} - ${assessments[0].status}</div>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-error">Dashboard access test failed: ${error.message}</div>`;
+            }
+        };
+
+        window.testRLS = async function() {
+            const resultDiv = document.getElementById('rlsResult');
+            resultDiv.innerHTML = '<div class="test-info">Testing RLS policies...</div>';
+            
+            try {
+                if (!window.testCredentials || !window.testAssessmentId) {
+                    resultDiv.innerHTML = '<div class="test-error">Please run auth and assessment tests first</div>';
+                    return;
+                }
+                
+                // Test 1: User can access their own assessment
+                const { data: ownAssessment, error: ownError } = await supabase
+                    .from('assessments')
+                    .select('*')
+                    .eq('id', window.testAssessmentId)
+                    .single();
+                
+                if (ownError) {
+                    resultDiv.innerHTML = `<div class="test-error">Cannot access own assessment: ${ownError.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML = `<div class="test-success">Can access own assessment</div>`;
+                
+                // Test 2: Try to access assessment with different user (should fail)
+                // First sign out
+                await supabase.auth.signOut();
+                
+                // Create another test user
+                const testEmail2 = `test2-${Date.now()}@example.com`;
+                const { data: signupData2 } = await supabase.auth.signUp({
+                    email: testEmail2,
+                    password: 'testpassword123'
+                });
+                
+                await supabase.auth.signInWithPassword({
+                    email: testEmail2,
+                    password: 'testpassword123'
+                });
+                
+                // Try to access the first user's assessment
+                const { data: otherAssessment, error: otherError } = await supabase
+                    .from('assessments')
+                    .select('*')
+                    .eq('id', window.testAssessmentId)
+                    .single();
+                
+                if (otherError && otherError.code === 'PGRST116') {
+                    resultDiv.innerHTML += `<div class="test-success">RLS working: Cannot access other user's assessment</div>`;
+                } else {
+                    resultDiv.innerHTML += `<div class="test-error">RLS not working: Can access other user's assessment</div>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-error">RLS test failed: ${error.message}</div>`;
+            }
+        };
+
+        // Initialize tests
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Environment check
+            const envDiv = document.getElementById('envCheck');
+            const hasEnv = !!(window.__env__?.SUPABASE_URL && window.__env__?.SUPABASE_ANON_KEY);
+            envDiv.innerHTML = hasEnv ? 
+                '<div class="test-success">Environment variables loaded</div>' :
+                '<div class="test-error">Environment variables missing</div>';
+            
+            // Connection check
+            const connectionDiv = document.getElementById('connectionCheck');
+            try {
+                const { data, error } = await supabase.from('assessments').select('count').limit(1);
+                if (error) {
+                    connectionDiv.innerHTML = `<div class="test-error">Connection failed: ${error.message}</div>`;
+                } else {
+                    connectionDiv.innerHTML = '<div class="test-success">Supabase connection successful</div>';
+                }
+            } catch (error) {
+                connectionDiv.innerHTML = `<div class="test-error">Connection test failed: ${error.message}</div>`;
+            }
+        });
+    </script>
+    <script src="js/dev-env.js"></script>
+</body>
+</html> 

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questions Test</title>
+</head>
+<body>
+    <h1>Questions Loading Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import validAssessmentData from './js/questions-data.js';
+        import { logger } from './js/logger.js';
+
+        console.log('Testing questions loading...');
+        console.log('validAssessmentData:', validAssessmentData);
+        console.log('questions:', validAssessmentData.questions);
+        console.log('questions length:', validAssessmentData.questions?.length);
+        console.log('first question:', validAssessmentData.questions?.[0]);
+
+        const output = document.getElementById('output');
+        output.innerHTML = `
+            <h2>Questions Test Results:</h2>
+            <p><strong>Has validAssessmentData:</strong> ${!!validAssessmentData}</p>
+            <p><strong>Has questions:</strong> ${!!validAssessmentData?.questions}</p>
+            <p><strong>Questions length:</strong> ${validAssessmentData?.questions?.length || 'undefined'}</p>
+            <p><strong>First question:</strong> ${validAssessmentData?.questions?.[0]?.text || 'undefined'}</p>
+        `;
+
+        if (validAssessmentData?.questions?.length > 0) {
+            output.innerHTML += '<p style="color: green;">✅ Questions loaded successfully!</p>';
+        } else {
+            output.innerHTML += '<p style="color: red;">❌ Questions failed to load!</p>';
+        }
+    </script>
+</body>
+</html> 

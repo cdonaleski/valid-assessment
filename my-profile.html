@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | VALID Assessment</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/mobile.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <img src="img/TVM_ Logo_L.png" alt="The Validated Mind Research Lab Logo" class="header-logo">
+            <div class="header-right">
+                <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </button>
+                <button class="btn btn-outline" onclick="signOut()">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
+            </div>
+        </div>
+    </header>
+    <main class="app-container">
+        <div class="profile-grid">
+            <!-- Profile Summary Card -->
+            <div class="profile-summary-card">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle" style="font-size: 4rem; color: #0D4E5C;"></i>
+                </div>
+                <div class="profile-summary-info">
+                    <h3 id="summaryName">&nbsp;</h3>
+                    <div id="summaryEmail" class="profile-summary-email">&nbsp;</div>
+                    <div id="summaryProvider" class="profile-summary-provider">&nbsp;</div>
+                </div>
+            </div>
+            <!-- Profile Edit Card -->
+            <div class="content-card profile-section">
+                <div class="profile-header">
+                    <h2>My Profile</h2>
+                    <p class="profile-description">Manage your personal information, demographics, and account settings.</p>
+                </div>
+                <form id="profileForm" class="profile-form">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="job_title">Job Title</label>
+                        <input type="text" id="job_title" name="job_title">
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <input type="text" id="department" name="department">
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location">
+                    </div>
+                    <div class="form-group">
+                        <label for="role">Role Level</label>
+                        <select id="role" name="role">
+                            <option value="">Please select...</option>
+                            <option value="Individual Contributor">Individual Contributor</option>
+                            <option value="Team Lead">Team Lead</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Director">Director</option>
+                            <option value="VP/C-Suite">VP/C-Suite</option>
+                            <option value="Owner/Founder">Owner/Founder</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="experience">Years of Experience</label>
+                        <select id="experience" name="experience">
+                            <option value="">Please select...</option>
+                            <option value="0-2">0-2 years</option>
+                            <option value="3-5">3-5 years</option>
+                            <option value="6-10">6-10 years</option>
+                            <option value="11-15">11-15 years</option>
+                            <option value="15+">15+ years</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Authentication Provider</label>
+                        <div id="authProvider" class="auth-provider"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    <style>
+    .profile-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+        align-items: flex-start;
+    }
+    @media (max-width: 900px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .profile-summary-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 220px;
+        max-width: 350px;
+        margin-bottom: 2rem;
+    }
+    .profile-avatar {
+        margin-bottom: 1rem;
+    }
+    .profile-summary-info {
+        text-align: center;
+    }
+    .profile-summary-email {
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    .profile-summary-provider {
+        color: #0D4E5C;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    </style>
+    <script type="module" src="js/assessment-manager.js"></script>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
+        const SUPABASE_URL = window.__env__?.SUPABASE_URL || 'https://txqtbblkrqmydkjztaip.supabase.co';
+        const SUPABASE_ANON_KEY = window.__env__?.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+        let isDemo = false;
+
+        function getDemoUser() {
+            const demoUser = localStorage.getItem('demoUser');
+            if (demoUser) {
+                isDemo = true;
+                return JSON.parse(demoUser);
+            }
+            return null;
+        }
+
+        async function fetchUserProfile() {
+            const demoUser = getDemoUser();
+            if (demoUser) {
+                window.currentUser = demoUser;
+                populateProfileForm();
+                applyProfilePermissions();
+                return;
+            }
+            // Not demo, use Supabase
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error || !user) {
+                alert('Could not fetch user profile. Please sign in again.');
+                window.location.href = 'index.html';
+                return;
+            }
+            // Fetch user profile from users table
+            const { data, error: profileError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            if (profileError || !data) {
+                alert('Could not load profile data.');
+                return;
+            }
+            window.currentUser = data;
+            populateProfileForm();
+            applyProfilePermissions();
+        }
+
+        function populateProfileForm() {
+            if (!window.currentUser) return;
+            const user = window.currentUser;
+            // Ensure profile object exists
+            const profile = user.profile || {};
+            document.getElementById('name').value = user.name || '';
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('job_title').value = profile.job_title || '';
+            document.getElementById('department').value = profile.department || '';
+            document.getElementById('location').value = profile.location || '';
+            document.getElementById('role').value = profile.role || '';
+            document.getElementById('experience').value = profile.experience || '';
+            // Show auth provider
+            let provider = user.auth_provider || 'Email/Password';
+            if (user.provider) provider = user.provider;
+            document.getElementById('authProvider').textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
+            // Update summary card
+            document.getElementById('summaryName').textContent = user.name || '';
+            document.getElementById('summaryEmail').textContent = user.email || '';
+            document.getElementById('summaryProvider').textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
+        }
+
+        async function updateUserProfile(formData) {
+            if (!window.currentUser) return;
+            if (isDemo) {
+                // Ensure profile object exists
+                const oldProfile = window.currentUser.profile || {};
+                const updated = {
+                    ...window.currentUser,
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    profile: {
+                        ...oldProfile,
+                        job_title: formData.get('job_title'),
+                        department: formData.get('department'),
+                        location: formData.get('location'),
+                        role: formData.get('role'),
+                        experience: formData.get('experience')
+                    }
+                };
+                localStorage.setItem('demoUser', JSON.stringify(updated));
+                window.currentUser = updated;
+                alert('Profile saved successfully! (Demo mode)');
+                populateProfileForm();
+                return;
+            }
+            // Not demo, update via Supabase
+            const userId = window.currentUser.id;
+            const updateObj = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                profile: {
+                    job_title: formData.get('job_title'),
+                    department: formData.get('department'),
+                    location: formData.get('location'),
+                    role: formData.get('role'),
+                    experience: formData.get('experience')
+                }
+            };
+            const { error } = await supabase
+                .from('users')
+                .update(updateObj)
+                .eq('id', userId);
+            if (error) {
+                alert('Failed to save profile: ' + error.message);
+            } else {
+                alert('Profile saved successfully!');
+                await fetchUserProfile();
+            }
+        }
+
+        // Unsaved changes detection
+        let isDirty = false;
+        document.getElementById('profileForm').addEventListener('input', () => {
+            isDirty = true;
+        });
+        document.getElementById('profileForm').addEventListener('submit', () => {
+            isDirty = false;
+        });
+        window.addEventListener('beforeunload', function (e) {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            await updateUserProfile(formData);
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchUserProfile();
+        });
+    </script>
+</body>
+</html> 

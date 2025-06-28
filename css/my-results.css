@@ -1,0 +1,252 @@
+/* Scoped styles for My Results section in dashboard */
+.my-results-section {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #f9fafb;
+    padding: 2rem 0;
+}
+.my-results-section h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+.my-results-section .description {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+.my-results-section .alert {
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.my-results-section .scenario-selector {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+}
+.my-results-section .scenario-header h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+.my-results-section .scenario-header p {
+    margin: 0 0 0.5rem 0;
+    color: #6b7280;
+    font-size: 0.98rem;
+}
+.my-results-section .scenario-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.my-results-section .scenario-dropdown {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #1f2937;
+}
+.my-results-section .scenario-info {
+    color: #64748b;
+    font-size: 0.98rem;
+}
+.my-results-section .profile-section {
+    display: flex;
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+.my-results-section .chart-section {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 2rem 2.5rem 2rem 2rem;
+    flex: 1 1 400px;
+    min-width: 340px;
+}
+.my-results-section .chart-container {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+    min-height: 340px;
+}
+.my-results-section .scores-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    flex: 1 1 320px;
+    min-width: 320px;
+}
+.my-results-section .primary-style, .my-results-section .secondary-style {
+    background: #f9fafb;
+    border-left: 4px solid #3b82f6;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+.my-results-section .primary-style h3, .my-results-section .secondary-style h3 {
+    margin: 0 0 1rem 0;
+    color: #1f2937;
+    font-size: 1.125rem;
+}
+.my-results-section .primary-style p, .my-results-section .secondary-style p {
+    margin: 0;
+    color: #6b7280;
+    line-height: 1.6;
+}
+.my-results-section .caution-text {
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.98rem;
+}
+.my-results-section .dimension-scores {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #e5e7eb;
+}
+.my-results-section .dimension-scores h3 {
+    margin: 0 0 1.5rem 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+}
+.my-results-section .score-bars {
+    display: grid;
+    gap: 1rem;
+}
+.my-results-section .score-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.my-results-section .score-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+    color: #374151;
+}
+.my-results-section .score-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #e5e7eb;
+    position: relative;
+    overflow: hidden;
+}
+.my-results-section .score-bar.verity { background: #0D4E5C; }
+.my-results-section .score-bar.association { background: #29A7D3; }
+.my-results-section .score-bar.lived { background: #4caf50; }
+.my-results-section .score-bar.institutional { background: #ffd166; }
+.my-results-section .score-bar.desire { background: #ef476f; }
+.my-results-section .score-value {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1.05rem;
+}
+.my-results-section .awareness-section {
+    margin-top: 2.5rem;
+}
+.my-results-section .awareness-score {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    margin-top: 1rem;
+}
+.my-results-section .score-bar.awareness {
+    background: #3b82f6;
+    height: 8px;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+.my-results-section .awareness-description {
+    color: #64748b;
+    font-size: 0.98rem;
+    margin-top: 0.5rem;
+}
+.my-results-section .general-profile {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+.my-results-section .general-profile-card {
+    flex: 1 1 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem 1rem 1.2rem 1rem;
+    text-align: center;
+    border-top: 4px solid #e5e7eb;
+    box-shadow: none;
+    min-width: 160px;
+    transition: box-shadow 0.2s;
+}
+.my-results-section .general-profile-card.verity { border-top-color: #0e5e6f; }
+.my-results-section .general-profile-card.association { border-top-color: #2196f3; }
+.my-results-section .general-profile-card.lived { border-top-color: #43a047; }
+.my-results-section .general-profile-card.institutional { border-top-color: #ffc107; }
+.my-results-section .general-profile-card.desire { border-top-color: #e53935; }
+.my-results-section .general-profile-card .card-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+.my-results-section .general-profile-card .card-desc {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin-bottom: 0.7rem;
+}
+.my-results-section .general-profile-card .card-score {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 0.2rem;
+}
+.my-results-section .validation-insights {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+}
+.my-results-section .insight-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    padding: 1.25rem 1.5rem;
+    flex: 1 1 200px;
+    min-width: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.my-results-section .insight-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.my-results-section .insight-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.98rem;
+    line-height: 1.5;
+}
+.verity { border-top-color: #0e5e6f; }
+.verity-color { color: #0e5e6f !important; }
+.association { border-top-color: #2196f3; }
+.association-color { color: #2196f3 !important; }
+.lived { border-top-color: #43a047; }
+.lived-color { color: #43a047 !important; }
+.institutional { border-top-color: #ffc107; }
+.institutional-color { color: #ffc107 !important; }
+.desire { border-top-color: #e53935; }
+.desire-color { color: #e53935 !important; } 

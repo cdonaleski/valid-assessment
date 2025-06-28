@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | VALID Assessment</title>
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <img src="./img/TVM_ Logo_L.png" alt="The Validated Mind Logo" class="logo">
+        <h2 class="login-title">Welcome Back</h2>
+        <p class="login-subtitle">Sign in to your VALID Assessment account</p>
+        
+        <div class="login-buttons">
+            <button class="login-btn google" onclick="signInWithGoogle()">
+                <i class="fab fa-google"></i>
+                Continue with Google
+            </button>
+            
+            <button class="login-btn microsoft" onclick="signInWithMicrosoft()">
+                <i class="fab fa-microsoft"></i>
+                Continue with Microsoft
+            </button>
+            
+            <button class="login-btn linkedin" onclick="signInWithLinkedIn()">
+                <i class="fab fa-linkedin"></i>
+                Continue with LinkedIn
+            </button>
+        </div>
+        
+        <div class="divider">
+            <span>or</span>
+        </div>
+        
+        <button class="login-btn demo" onclick="signInWithDummy()">
+            <i class="fas fa-user"></i>
+            Demo Login (Dummy Credentials)
+        </button>
+        
+        <div style="margin-top: 1.5rem;"></div>
+        
+        <div class="terms">
+            By continuing, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+        </div>
+    </div>
+
+    <script>
+        // Auth functions
+        function signInWithGoogle() {
+            // TODO: Implement Google OAuth
+            alert('Google OAuth integration coming soon!');
+        }
+
+        function signInWithMicrosoft() {
+            // TODO: Implement Microsoft OAuth
+            alert('Microsoft OAuth integration coming soon!');
+        }
+
+        function signInWithLinkedIn() {
+            // TODO: Implement LinkedIn OAuth
+            alert('LinkedIn OAuth integration coming soon!');
+        }
+
+        function signInWithDummy() {
+            const demoUser = { 
+                email: 'demo@validatedmind.com',
+                name: 'Demo User',
+                id: 'demo-user-123'
+            };
+            localStorage.setItem('demoUser', JSON.stringify(demoUser));
+            window.location.href = './dashboard.html';
+        }
+
+        // Check if user is already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const demoUser = localStorage.getItem('demoUser');
+            if (demoUser) {
+                // User is already logged in, redirect to dashboard
+                window.location.href = './dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -36,16 +36,6 @@ async function transitionToSection(fromSection, toSection) {
             throw new Error(`Target section not found: ${toSection}`);
         }
         
-        // Special handling for demographics section
-        if (toSection === 'demographicsSection') {
-            targetSection.style.display = 'flex';
-            // Ensure form is scrolled to top
-            const form = targetSection.querySelector('.demographics-form');
-            if (form) {
-                form.scrollTop = 0;
-            }
-        }
-        
         targetSection.classList.add('active');
         logger.debug(`Added active class to section: ${toSection}`);
         
@@ -201,19 +191,22 @@ function setupStartButton(controller) {
                 throw new Error('Controller not initialized');
             }
 
+            // Clear controller state before transitioning
+            await controller.stateManager.clearState();
+
             // Reset state before transitioning
             await controller.stateManager.setState({
                 isInitialized: false,
                 isTransitioning: false,
-                currentSection: 'demographicsSection',
+                currentSection: 'instructionsSection',
                 demographics: null,
                 answers: [],
                 currentQuestion: 0,
                 autoAdvance: false
             });
 
-            // Attempt to show demographics section
-            await controller.showSection('demographicsSection');
+            // Attempt to show instructions section
+            await controller.showSection('instructionsSection');
 
         } catch (error) {
             logger.error('Failed to start assessment:', {
@@ -565,6 +558,7 @@ function setupResumeForm(controller) {
 
             // Clear form
             resumeForm.reset();
+            return;
         } catch (error) {
             // Show appropriate error message
             let errorMessage = 'Failed to resume assessment. ';
@@ -675,32 +669,20 @@ function setupNavigationButtons(controller) {
         
         newNextBtn.addEventListener('click', async () => {
             try {
-                logger.debug('Next question button clicked', {
-                    currentQuestion: controller.state.currentQuestion
-                });
-
-                // Get current state and validate questions exist
+                // Only allow advancing if auto-advance is off
                 const state = controller.stateManager.getState();
-                if (!controller.state?.questions || !Array.isArray(controller.state.questions)) {
-                    logger.error('Questions not properly loaded', {
-                        questions: controller.state?.questions
-                    });
-                    throw new Error('Questions not properly loaded');
-                }
+                if (state.autoAdvance) return;
 
-                const currentQuestionIndex = controller.state.currentQuestion;
-                if (currentQuestionIndex === undefined || currentQuestionIndex === null) {
-                    logger.error('Current question index is invalid', {
-                        currentQuestionIndex,
-                        totalQuestions: controller.state.questions.length
-                    });
-                    throw new Error('Current question index is invalid');
-                }
-                
+                // Get the current question and answers
+                const questions = controller.state.questions || controller.assessmentManager.questions;
+                const currentIndex = controller.state.currentQuestion;
+                const currentQuestion = questions[currentIndex];
+
                 // Check if we have an answer for the current question
-                if (!state.answers || !Array.isArray(state.answers) || !state.answers[currentQuestionIndex]) {
+                const hasAnswer = state.answers && state.answers[currentQuestion.id];
+                if (!hasAnswer) {
                     logger.debug('Cannot proceed - no answer for current question', {
-                        currentQuestionIndex,
+                        currentQuestionId: currentQuestion.id,
                         answers: state.answers
                     });
                     return;
@@ -708,16 +690,13 @@ function setupNavigationButtons(controller) {
 
                 newNextBtn.disabled = true;
                 await controller.nextQuestion();
-                
-                // Re-enable button if we're not at the last question
-                if (controller.state.currentQuestion < controller.state.questions.length - 1) {
+
+                // Re-enable if not at last question
+                if (controller.state.currentQuestion < questions.length - 1) {
                     newNextBtn.disabled = false;
                 }
             } catch (error) {
-                logger.error('Failed to navigate to next question:', {
-                    error: error.message,
-                    stack: error.stack
-                });
+                logger.error('Failed to navigate to next question:', error);
                 newNextBtn.disabled = false;
                 showError('Failed to navigate to next question. Please try again.');
             }
@@ -752,18 +731,23 @@ function setupScaleButtons(controller) {
                     const btnValue = parseInt(btn.dataset.value);
                     btn.classList.toggle('selected', btnValue === value);
                 });
-
-                // Enable next button
-                const nextButton = document.getElementById('nextQuestion');
-                if (nextButton) {
-                    nextButton.disabled = false;
+                // Only enable next button if auto-advance is disabled
+                const state = controller.stateManager.getState();
+                if (!state.autoAdvance) {
+                    const nextButton = document.getElementById("nextQuestion");
+                    if (nextButton) {
+                        nextButton.disabled = false;
+                        logger.debug("Next button enabled (auto-advance disabled)");
+                    }
+                } else {
+                    logger.debug("Auto-advance enabled, next button will be handled automatically");
                 }
 
-                logger.debug('Scale button click handled', {
+                logger.debug("Scale button click handled", {
                     selectedValue: value,
-                    nextButtonEnabled: nextButton ? !nextButton.disabled : null
-                });
-            } catch (error) {
+                    autoAdvance: state.autoAdvance,
+                    nextButtonEnabled: !state.autoAdvance
+                });            } catch (error) {
                 logger.error('Failed to handle response:', {
                     error: error.message,
                     stack: error.stack
@@ -844,39 +828,6 @@ function setupBackButton(controller) {
             backButton.classList.remove('loading');
         }
     });
-
-    // Also setup back button in instructions section
-    const backToDemographicsButton = document.getElementById('backToDemographicsButton');
-    if (backToDemographicsButton) {
-        backToDemographicsButton.addEventListener('click', async () => {
-            try {
-                logger.debug('Back to demographics button clicked', {
-                    currentSection: controller.currentSection
-                });
-
-                // Disable button to prevent double-clicks
-                backToDemographicsButton.disabled = true;
-                backToDemographicsButton.classList.add('loading');
-
-                // Go back to demographics section
-                await controller.showSection('demographicsSection');
-
-                // Re-enable button
-                backToDemographicsButton.disabled = false;
-                backToDemographicsButton.classList.remove('loading');
-            } catch (error) {
-                logger.error('Failed to go back to demographics:', {
-                    error: error.message,
-                    stack: error.stack
-                });
-                showError('Failed to go back. Please try again.');
-                
-                // Re-enable button on error
-                backToDemographicsButton.disabled = false;
-                backToDemographicsButton.classList.remove('loading');
-            }
-        });
-    }
 
     logger.debug('Back button handler attached successfully');
 }
@@ -999,6 +950,13 @@ function setupBeginAssessmentButton(controller) {
             beginAssessmentButton.disabled = true;
             beginAssessmentButton.classList.add('loading');
 
+            // Show token display container when beginning assessment
+            const tokenContainer = document.querySelector('.token-display-container');
+            if (tokenContainer) {
+                tokenContainer.classList.add('show');
+                logger.debug('Token display container shown when beginning assessment');
+            }
+            
             // Show questions section
             await controller.showSection('questionsSection');
 

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management Test</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/dashboard.css">
+    <link rel="stylesheet" href="./css/team-management.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Team Management Test</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn secondary" onclick="window.location.href='dashboard.html'">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-content" style="padding: 2rem;">
+            <div class="team-management-header">
+                <h1>Team Management System</h1>
+                <p style="color: #6b7280; margin-bottom: 2rem;">Test the comprehensive team management functionality including team creation, member management, invitations, and result sharing.</p>
+                
+                <div class="team-actions">
+                    <button id="createTeamBtn" class="btn primary" onclick="showCreateTeamModal()">
+                        <i class="fas fa-plus"></i> Create New Team
+                    </button>
+                    <button id="joinTeamBtn" class="btn secondary" onclick="showJoinTeamModal()">
+                        <i class="fas fa-sign-in-alt"></i> Join Team
+                    </button>
+                    <button id="loadDemoDataBtn" class="btn secondary" onclick="loadDemoData()">
+                        <i class="fas fa-database"></i> Load Demo Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Team Overview -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">My Teams</h3>
+                    <div class="team-filters">
+                        <select id="teamTypeFilter" class="form-control" onchange="filterTeams()">
+                            <option value="">All Teams</option>
+                            <option value="internal">Internal Teams</option>
+                            <option value="external">External Teams</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="teamGrid" class="team-grid">
+                        <div class="team-empty-state">
+                            <i class="fas fa-users"></i>
+                            <h3>No Teams Yet</h3>
+                            <p>Create your first team or join an existing one to get started.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Details Section -->
+            <div id="teamDetailsSection" class="dashboard-card" style="display: none; margin-top: 2rem;">
+                <div class="card-header">
+                    <h3 class="card-title" id="currentTeamName">Team Name</h3>
+                    <div class="team-detail-actions">
+                        <button id="inviteMemberBtn" class="btn secondary" onclick="showInviteMemberModal()">
+                            <i class="fas fa-user-plus"></i> Invite Member
+                        </button>
+                        <button id="shareResultsBtn" class="btn primary" onclick="shareResultsWithTeam()">
+                            <i class="fas fa-share-alt"></i> Share My Results
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="team-stats-overview">
+                        <div class="stat-item">
+                            <div class="stat-number" id="teamMemberCount">0</div>
+                            <div class="stat-label">Team Members</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="teamAssessmentCount">0</div>
+                            <div class="stat-label">Completed Assessments</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="teamCompletionRate">0%</div>
+                            <div class="stat-label">Completion Rate</div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-members-section">
+                        <h4>Team Members</h4>
+                        <div id="memberGrid" class="member-grid">
+                            <!-- Team members will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Comparison Section -->
+            <div class="dashboard-card" style="margin-top: 2rem;">
+                <div class="card-header">
+                    <h3 class="card-title">Team Comparison</h3>
+                    <button id="createComparisonBtn" class="btn primary" onclick="showCreateComparisonModal()">
+                        <i class="fas fa-chart-line"></i> Create Comparison
+                    </button>
+                </div>
+                <div class="card-content">
+                    <div id="comparisonSessions" class="comparison-sessions">
+                        <div class="team-empty-state">
+                            <i class="fas fa-chart-bar"></i>
+                            <h3>No Comparison Sessions</h3>
+                            <p>Create a comparison session to analyze team VALID profiles together.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Team Modal -->
+    <div id="createTeamModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Team</h2>
+                <button class="modal-close" onclick="closeModal('createTeamModal')">&times;</button>
+            </div>
+            <form id="createTeamForm" class="modal-form">
+                <div class="form-group">
+                    <label for="teamName">Team Name *</label>
+                    <input type="text" id="teamName" name="teamName" required>
+                </div>
+                <div class="form-group">
+                    <label for="teamDescription">Description</label>
+                    <textarea id="teamDescription" name="teamDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="organizationName">Organization Name</label>
+                    <input type="text" id="organizationName" name="organizationName">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isExternal" name="isExternal" value="true">
+                        <span class="checkmark"></span>
+                        This is an external team (outside your organization)
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" onclick="closeModal('createTeamModal')">Cancel</button>
+                    <button type="submit" class="btn primary">Create Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Join Team Modal -->
+    <div id="joinTeamModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Join Team</h2>
+                <button class="modal-close" onclick="closeModal('joinTeamModal')">&times;</button>
+            </div>
+            <form id="joinTeamForm" class="modal-form">
+                <div class="form-group">
+                    <label for="invitationToken">Invitation Token *</label>
+                    <input type="text" id="invitationToken" name="invitationToken" required 
+                           placeholder="Paste your invitation token here">
+                    <small>Enter the invitation token you received via email</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" onclick="closeModal('joinTeamModal')">Cancel</button>
+                    <button type="submit" class="btn primary">Join Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invite Member Modal -->
+    <div id="inviteMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Invite Team Member</h2>
+                <button class="modal-close" onclick="closeModal('inviteMemberModal')">&times;</button>
+            </div>
+            <form id="inviteMemberForm" class="modal-form">
+                <div class="form-group">
+                    <label for="inviteEmail">Email Address *</label>
+                    <input type="email" id="inviteEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="inviteRole">Role</label>
+                    <select id="inviteRole" name="role">
+                        <option value="member">Member</option>
+                        <option value="manager">Manager</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inviteMessage">Personal Message (Optional)</label>
+                    <textarea id="inviteMessage" name="message" rows="3" 
+                              placeholder="Add a personal message to your invitation..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" onclick="closeModal('inviteMemberModal')">Cancel</button>
+                    <button type="submit" class="btn primary">Send Invitation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Comparison Modal -->
+    <div id="createComparisonModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Team Comparison</h2>
+                <button class="modal-close" onclick="closeModal('createComparisonModal')">&times;</button>
+            </div>
+            <form id="createComparisonForm" class="modal-form">
+                <div class="form-group">
+                    <label for="comparisonName">Comparison Name *</label>
+                    <input type="text" id="comparisonName" name="comparisonName" required>
+                </div>
+                <div class="form-group">
+                    <label for="comparisonDescription">Description</label>
+                    <textarea id="comparisonDescription" name="comparisonDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="comparisonTeam">Select Team</label>
+                    <select id="comparisonTeam" name="comparisonTeam" required>
+                        <option value="">Choose a team...</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" onclick="closeModal('createComparisonModal')">Cancel</button>
+                    <button type="submit" class="btn primary">Create Comparison</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/team-management.js"></script>
+    <script>
+        // Demo data for testing
+        const demoTeams = [
+            {
+                id: 'demo-team-1',
+                name: 'Marketing Team',
+                description: 'Core marketing team for product launches',
+                organization_name: 'Demo Corp',
+                is_external: false,
+                user_role: 'manager',
+                member_count: 8,
+                assessment_count: 6,
+                members: [
+                    {
+                        user_id: 'demo-user-1',
+                        first_name: 'Sarah',
+                        last_name: 'Johnson',
+                        email: 'sarah.j@democorp.com',
+                        role: 'member',
+                        department: 'Marketing',
+                        joined_at: '2024-01-15T10:00:00Z',
+                        has_assessment: true,
+                        last_assessment_date: '2024-01-20T14:30:00Z',
+                        assessment_scores: {
+                            verity: 75,
+                            association: 60,
+                            lived_experience: 85,
+                            institutional: 70,
+                            desire: 80
+                        }
+                    },
+                    {
+                        user_id: 'demo-user-2',
+                        first_name: 'Mike',
+                        last_name: 'Chen',
+                        email: 'mike.chen@democorp.com',
+                        role: 'member',
+                        department: 'Marketing',
+                        joined_at: '2024-01-16T09:00:00Z',
+                        has_assessment: true,
+                        last_assessment_date: '2024-01-21T11:15:00Z',
+                        assessment_scores: {
+                            verity: 65,
+                            association: 80,
+                            lived_experience: 70,
+                            institutional: 85,
+                            desire: 75
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'demo-team-2',
+                name: 'External Partners',
+                description: 'Collaboration with external agencies',
+                organization_name: 'Partner Agency',
+                is_external: true,
+                user_role: 'member',
+                member_count: 5,
+                assessment_count: 3,
+                members: [
+                    {
+                        user_id: 'demo-user-3',
+                        first_name: 'Alex',
+                        last_name: 'Rodriguez',
+                        email: 'alex@partneragency.com',
+                        role: 'manager',
+                        department: 'Strategy',
+                        joined_at: '2024-01-10T08:00:00Z',
+                        has_assessment: true,
+                        last_assessment_date: '2024-01-18T16:45:00Z',
+                        assessment_scores: {
+                            verity: 90,
+                            association: 75,
+                            lived_experience: 80,
+                            institutional: 85,
+                            desire: 70
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Global functions
+        window.showCreateTeamModal = function() {
+            document.getElementById('createTeamModal').style.display = 'block';
+        };
+
+        window.showJoinTeamModal = function() {
+            document.getElementById('joinTeamModal').style.display = 'block';
+        };
+
+        window.showInviteMemberModal = function() {
+            document.getElementById('inviteMemberModal').style.display = 'block';
+        };
+
+        window.showCreateComparisonModal = function() {
+            document.getElementById('createComparisonModal').style.display = 'block';
+        };
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        };
+
+        window.filterTeams = function() {
+            const filter = document.getElementById('teamTypeFilter').value;
+            const teamCards = document.querySelectorAll('.team-card');
+            
+            teamCards.forEach(card => {
+                if (!filter || 
+                    (filter === 'internal' && !card.classList.contains('external-team')) ||
+                    (filter === 'external' && card.classList.contains('external-team'))) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        };
+
+        window.loadDemoData = function() {
+            renderTeams(demoTeams);
+            showMessage('Demo data loaded successfully!', 'success');
+        };
+
+        window.shareResultsWithTeam = function() {
+            showMessage('Results shared successfully! (Demo)', 'success');
+        };
+
+        function renderTeams(teams) {
+            const teamGrid = document.getElementById('teamGrid');
+            if (!teamGrid) return;
+
+            if (!teams || teams.length === 0) {
+                teamGrid.innerHTML = `
+                    <div class="team-empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>No Teams Yet</h3>
+                        <p>Create your first team or join an existing one to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            teamGrid.innerHTML = teams.map(team => `
+                <div class="team-card ${team.is_external ? 'external-team' : ''}" onclick="selectTeam('${team.id}')">
+                    <div class="team-header">
+                        <h4>${team.name}</h4>
+                        ${team.is_external ? '<span class="external-badge">External</span>' : ''}
+                    </div>
+                    <p class="team-description">${team.description || 'No description'}</p>
+                    <div class="team-stats">
+                        <span><i class="fas fa-users"></i> ${team.member_count} members</span>
+                        <span><i class="fas fa-chart-bar"></i> ${team.assessment_count} assessments</span>
+                    </div>
+                    <div class="team-actions">
+                        <button class="btn btn-primary">
+                            View Team
+                        </button>
+                        ${team.user_role === 'owner' || team.user_role === 'manager' ? `
+                            <button class="btn btn-secondary">
+                                <i class="fas fa-user-plus"></i> Invite
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectTeam(teamId) {
+            const team = demoTeams.find(t => t.id === teamId);
+            if (!team) return;
+
+            document.getElementById('currentTeamName').textContent = team.name;
+            document.getElementById('teamMemberCount').textContent = team.member_count;
+            document.getElementById('teamAssessmentCount').textContent = team.assessment_count;
+            document.getElementById('teamCompletionRate').textContent = 
+                Math.round((team.assessment_count / team.member_count) * 100) + '%';
+
+            renderTeamMembers(team.members);
+            document.getElementById('teamDetailsSection').style.display = 'block';
+        }
+
+        function renderTeamMembers(members) {
+            const memberGrid = document.getElementById('memberGrid');
+            if (!memberGrid) return;
+
+            memberGrid.innerHTML = members.map(member => `
+                <div class="member-card">
+                    <div class="member-avatar">
+                        <div class="avatar-initials">
+                            ${member.first_name ? member.first_name.charAt(0) : ''}${member.last_name ? member.last_name.charAt(0) : ''}
+                        </div>
+                    </div>
+                    <div class="member-info">
+                        <h5>${member.first_name} ${member.last_name}</h5>
+                        <p class="member-email">${member.email}</p>
+                        <p class="member-role">${member.role} • ${member.department || 'No department'}</p>
+                    </div>
+                    <div class="member-assessment">
+                        ${member.has_assessment ? `
+                            <div class="assessment-status completed">
+                                <i class="fas fa-check-circle"></i> Completed
+                            </div>
+                            <button class="btn btn-small">
+                                View Results
+                            </button>
+                        ` : `
+                            <div class="assessment-status pending">
+                                <i class="fas fa-clock"></i> Pending
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `team-message ${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                ${type === 'success' ? 'background: #10b981;' : 'background: #ef4444;'}
+            `;
+
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form handlers
+            const createTeamForm = document.getElementById('createTeamForm');
+            const joinTeamForm = document.getElementById('joinTeamForm');
+            const inviteMemberForm = document.getElementById('inviteMemberForm');
+            const createComparisonForm = document.getElementById('createComparisonForm');
+
+            if (createTeamForm) {
+                createTeamForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const teamData = {
+                        id: 'demo-team-' + Date.now(),
+                        name: formData.get('teamName'),
+                        description: formData.get('teamDescription'),
+                        organization_name: formData.get('organizationName'),
+                        is_external: formData.get('isExternal') === 'true',
+                        user_role: 'owner',
+                        member_count: 1,
+                        assessment_count: 0,
+                        members: []
+                    };
+
+                    demoTeams.push(teamData);
+                    renderTeams(demoTeams);
+                    closeModal('createTeamModal');
+                    event.target.reset();
+                    showMessage('Team created successfully!', 'success');
+                });
+            }
+
+            if (joinTeamForm) {
+                joinTeamForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const token = formData.get('invitationToken');
+                    
+                    if (token === 'demo-token-123') {
+                        showMessage('Successfully joined team!', 'success');
+                    } else {
+                        showMessage('Invalid invitation token', 'error');
+                    }
+                    
+                    closeModal('joinTeamModal');
+                    event.target.reset();
+                });
+            }
+
+            if (inviteMemberForm) {
+                inviteMemberForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const email = formData.get('email');
+                    
+                    showMessage(`Invitation sent to ${email}!`, 'success');
+                    closeModal('inviteMemberModal');
+                    event.target.reset();
+                });
+            }
+
+            if (createComparisonForm) {
+                createComparisonForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const name = formData.get('comparisonName');
+                    
+                    showMessage(`Comparison session "${name}" created!`, 'success');
+                    closeModal('createComparisonModal');
+                    event.target.reset();
+                });
+            }
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

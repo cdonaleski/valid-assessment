@@ -308,6 +308,19 @@ async function checkHealth() {
     }
 }
 
+// Helper to get current Supabase Auth user (user_id)
+function getCurrentUserId() {
+    if (!supabaseInstance) return null;
+    const user = supabaseInstance.auth && supabaseInstance.auth.getUser ? supabaseInstance.auth.getUser() : null;
+    // getUser() returns a promise in v2, so handle that
+    if (user && typeof user.then === 'function') {
+        // Async version for callers
+        return user.then(res => res.data?.user?.id || null).catch(() => null);
+    }
+    // For v1 or if already resolved
+    return user?.id || null;
+}
+
 // Export functions and initialized client
 export {
     initializeSupabase,
@@ -315,7 +328,8 @@ export {
     checkHealth,
     saveAssessment,
     getAssessment,
-    createTables
+    createTables,
+    getCurrentUserId
 };
 
 // Default export for backward compatibility

@@ -268,11 +268,14 @@
         import { generatePDF } from './js/reports.js';
         // import { logger } from './js/logger.js';
         import { scenarios, getScenarioInsights, calculateContextScores } from './js/scenarios.js';
+        import { updateResultsUI, initializeRadarChart } from './js/results-ui.js';
         
         // Make scenarios available globally
         window.scenarios = scenarios;
         window.getScenarioInsights = getScenarioInsights;
         window.calculateContextScores = calculateContextScores;
+        window.updateResultsUI = updateResultsUI;
+        window.initializeRadarChart = initializeRadarChart;
         
         // Test console log to see if JavaScript is working
         console.log('Results page JavaScript loaded successfully');

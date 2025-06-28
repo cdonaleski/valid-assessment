@@ -1,0 +1,67 @@
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Brand-aligned color palette -->
+    <linearGradient id="verity" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="association" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0EA5E9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284C7;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="lived" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22C55E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16A34A;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="institutional" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="desire" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EF4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Modern container -->
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  
+  <!-- Team network -->
+  <g transform="translate(24, 24)">
+    <!-- Team member nodes with varied VALID colors -->
+    <circle cx="-6" cy="-6" r="3" fill="url(#lived)"/>
+    <circle cx="6" cy="-6" r="3" fill="url(#verity)"/>
+    <circle cx="8" cy="4" r="3" fill="url(#association)"/>
+    <circle cx="-2" cy="8" r="3" fill="url(#institutional)"/>
+    <circle cx="-8" cy="2" r="3" fill="url(#desire)"/>
+    
+    <!-- Connection lines (more subtle) -->
+    <line x1="-6" y1="-6" x2="6" y2="-6" stroke="#E5E7EB" stroke-width="1"/>
+    <line x1="6" y1="-6" x2="8" y2="4" stroke="#E5E7EB" stroke-width="1"/>
+    <line x1="8" y1="4" x2="-2" y2="8" stroke="#E5E7EB" stroke-width="1"/>
+    <line x1="-2" y1="8" x2="-8" y2="2" stroke="#E5E7EB" stroke-width="1"/>
+    <line x1="-8" y1="2" x2="-6" y2="-6" stroke="#E5E7EB" stroke-width="1"/>
+    
+    <!-- Person icons -->
+    <g fill="#FFFFFF">
+      <circle cx="-6" cy="-7" r="1"/>
+      <path d="M-7 -4 L-5 -4" stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round"/>
+      
+      <circle cx="6" cy="-7" r="1"/>
+      <path d="M5 -4 L7 -4" stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round"/>
+      
+      <circle cx="8" cy="3" r="1"/>
+      <path d="M7 6.5 L9 6.5" stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round"/>
+      
+      <circle cx="-2" cy="7" r="1"/>
+      <path d="M-3 9.5 L-1 9.5" stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round"/>
+      
+      <circle cx="-8" cy="1" r="1"/>
+      <path d="M-9 3.5 L-7 3.5" stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg> 

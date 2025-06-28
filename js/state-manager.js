@@ -4,10 +4,15 @@
  */
 
 import { logger } from './logger.js';
-import assessmentManager from './assessment-manager.js';
+// Storage keys for state management
 
 export class StateManager {
     constructor() {
+        // Storage keys for state management
+        this.STORAGE_KEYS = {
+            STATE: 'validAssessmentState',
+            DATA: 'validAssessmentData'
+        };
         this.state = {
             isInitialized: false,
             isTransitioning: false,
@@ -27,7 +32,7 @@ export class StateManager {
         this.listeners = new Set();
 
         // Try to load existing state
-        const savedState = localStorage.getItem(assessmentManager.STORAGE_KEYS.STATE);
+        const savedState = localStorage.getItem(this.STORAGE_KEYS.STATE);
         if (savedState) {
             try {
                 console.log('Loading saved state from localStorage');
@@ -40,7 +45,7 @@ export class StateManager {
                 console.log('Loaded state:', this.state);
             } catch (error) {
                 console.error('Error loading saved state:', error);
-                localStorage.removeItem(assessmentManager.STORAGE_KEYS.STATE);
+                localStorage.removeItem(this.STORAGE_KEYS.STATE);
             }
         }
 
@@ -60,7 +65,7 @@ export class StateManager {
             this.updateSectionVisibility();
 
             // Check if we have a valid state
-            const savedState = localStorage.getItem(assessmentManager.STORAGE_KEYS.STATE);
+            const savedState = localStorage.getItem(this.STORAGE_KEYS.STATE);
             if (savedState) {
                 const parsedState = JSON.parse(savedState);
                 if (parsedState.isInitialized && parsedState.demographics) {
@@ -72,7 +77,7 @@ export class StateManager {
         } catch (error) {
             logger.error('Failed to initialize state:', error);
             // Clear potentially corrupted state
-            localStorage.removeItem(assessmentManager.STORAGE_KEYS.STATE);
+            localStorage.removeItem(this.STORAGE_KEYS.STATE);
             this.state = {
                 isInitialized: false,
                 isTransitioning: false,
@@ -116,7 +121,7 @@ export class StateManager {
             }
 
             // Try to get state from local storage
-            const storedState = localStorage.getItem(assessmentManager.STORAGE_KEYS.STATE);
+            const storedState = localStorage.getItem(this.STORAGE_KEYS.STATE);
             if (!storedState) {
                 logger.warn('No state found in storage');
                 return null;
@@ -154,7 +159,7 @@ export class StateManager {
             };
 
             // Save to localStorage
-            localStorage.setItem(assessmentManager.STORAGE_KEYS.STATE, JSON.stringify(this.state));
+            localStorage.setItem(this.STORAGE_KEYS.STATE, JSON.stringify(this.state));
             console.log('State saved successfully:', this.state);
 
             // Notify listeners if we have any
@@ -240,7 +245,7 @@ export class StateManager {
     async saveState() {
         try {
             const serializedState = JSON.stringify(this.state);
-            localStorage.setItem(assessmentManager.STORAGE_KEYS.STATE, serializedState);
+            localStorage.setItem(this.STORAGE_KEYS.STATE, serializedState);
             
             logger.debug('State saved to storage', {
                 state: this.state
@@ -260,7 +265,7 @@ export class StateManager {
     // Load state from local storage
     async loadState() {
         try {
-            const serializedState = localStorage.getItem(assessmentManager.STORAGE_KEYS.STATE);
+            const serializedState = localStorage.getItem(this.STORAGE_KEYS.STATE);
             if (!serializedState) {
                 logger.debug('No saved state found');
                 return false;
@@ -287,8 +292,8 @@ export class StateManager {
     async clearState() {
         console.log('Clearing state');
         try {
-            localStorage.removeItem(assessmentManager.STORAGE_KEYS.STATE);
-            localStorage.removeItem(assessmentManager.STORAGE_KEYS.DATA);
+            localStorage.removeItem(this.STORAGE_KEYS.STATE);
+            localStorage.removeItem(this.STORAGE_KEYS.DATA);
             
             // Reset to initial state
             this.setState({
