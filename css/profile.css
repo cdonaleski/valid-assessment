@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Profile Section Styles */
 .profile-grid {
     display: grid;
@@ -278,7 +280,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 900px) {
+@media (max-width: var(--breakpoint-medium)) {
     .profile-grid {
         grid-template-columns: 1fr;
         gap: 1.5rem;

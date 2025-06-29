@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Results Page Styles */
 :root {
     /* Color Palette */
@@ -293,7 +295,7 @@ h1 {
 }
 
 /* Responsive scenario selector */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .scenario-controls {
         flex-direction: column;
         align-items: stretch;
@@ -620,7 +622,7 @@ h1 {
 }
 
 /* Responsive Adjustments */
-@media (max-width: 1200px) {
+@media (max-width: var(--breakpoint-xlarge)) {
     .profile-section {
         grid-template-columns: 1.4fr 1fr;
     }
@@ -631,7 +633,7 @@ h1 {
     }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: var(--breakpoint-large)) {
     .container {
         padding: 1rem;
     }
@@ -653,7 +655,7 @@ h1 {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .container {
         padding: 0.75rem;
     }
@@ -682,7 +684,7 @@ h1 {
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: var(--breakpoint-mobile)) {
     .score-label {
         flex-direction: column;
     }

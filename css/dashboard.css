@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Dashboard Login and Layout Styles */
 
 .login-container {
@@ -1153,7 +1155,7 @@ main {
     margin-top: 0 !important;
 }
 
-@media (max-width: 700px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .assessment-section, .valid-assessment-card {
         margin-top: 1.5rem !important;
     }
@@ -1516,7 +1518,7 @@ main {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .section-title {
         font-size: 2rem;
     }

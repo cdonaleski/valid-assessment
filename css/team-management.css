@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Team Management Styles */
 
 /* Team Management Header */
@@ -472,7 +474,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .team-grid {
         grid-template-columns: 1fr;
     }
@@ -513,7 +515,7 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: var(--breakpoint-mobile)) {
     .team-stats-overview {
         grid-template-columns: 1fr;
     }

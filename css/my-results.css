@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Scoped styles for My Results section in dashboard */
 .my-results-section {
     font-family: 'Inter', Arial, sans-serif;

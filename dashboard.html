@@ -51,12 +51,6 @@
                         <i class="fas fa-user-circle"></i>
                         <span id="userEmail">user@example.com</span>
                     </div>
-                    <button class="btn primary" onclick="renderDashboardResultsUI()" style="background: #ef4444; margin-right: 0.5rem;">
-                        🧪 Test Results UI (v2)
-                    </button>
-                    <button class="btn primary" onclick="createTestResults()" style="background: #10b981; margin-right: 0.5rem;">
-                        📊 Create Test Results
-                    </button>
                     <button class="btn primary" onclick="testGetCurrentUser()" style="background: #3b82f6; margin-right: 0.5rem;">
                         👤 Test User
                     </button>
@@ -485,10 +479,11 @@
                     <!-- My Results Section -->
                     <div id="dashboardResultsSection" class="dashboard-section" style="display: none;">
                         <div class="actions-section" style="margin-bottom: 2rem; justify-content: flex-end;">
-                            <button class="btn primary" onclick="createTestResults()" style="margin-right: 1rem; background: #10b981; border-color: #10b981;">
-                                <i class="fas fa-flask"></i>
-                                Create Test Results
-                            </button>
+                            <div id="demoActions" style="display: none; align-items: center; gap: 1rem;">
+                                <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444;">
+                                    🧪 Show Demo Results
+                                </button>
+                            </div>
                             <div class="dropdown">
                                 <button class="btn primary dropdown-toggle" id="downloadButton">
                                     <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
@@ -3013,6 +3008,175 @@
             e.preventDefault();
             hideDecisionForm();
         });
+
+        // --- DEMO USER LOGIC FOR MY RESULTS SECTION ---
+        function isDemoUser() {
+            try {
+                const demoUser = localStorage.getItem('demoUser');
+                if (demoUser) {
+                    const user = JSON.parse(demoUser);
+                    return !!user.email;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function hasCompletedAssessment() {
+            // This should check if real results exist for the user
+            if (window.assessmentStateManager && typeof window.assessmentStateManager.hasCompletedAssessments === 'function') {
+                return window.assessmentStateManager.hasCompletedAssessments();
+            }
+            return false;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const demoActions = document.getElementById('demoActions');
+            const toggleBtn = document.getElementById('toggleDemoResultsBtn');
+            if (isDemoUser() && demoActions && toggleBtn) {
+                demoActions.style.display = 'flex';
+                let showingDemoResults = false;
+                toggleBtn.addEventListener('click', function() {
+                    if (showingDemoResults) {
+                        // Show real results (if any)
+                        if (hasCompletedAssessment()) {
+                            if (typeof loadAssessmentResults === 'function') {
+                                loadAssessmentResults();
+                            }
+                        } else {
+                            // If no real results, show empty/fallback UI
+                            if (typeof renderDashboardResultsUI === 'function') {
+                                renderDashboardResultsUI({ isTestData: false });
+                            }
+                        }
+                        toggleBtn.textContent = '🧪 Show Demo Results';
+                    } else {
+                        // Show demo results
+                        if (typeof renderDashboardResultsUI === 'function') {
+                            renderDashboardResultsUI({ isTestData: true });
+                        }
+                        toggleBtn.textContent = 'Show Real Results';
+                    }
+                    showingDemoResults = !showingDemoResults;
+                });
+            }
+        });
+    </script>
+
+    <!-- Dummy fallback for missing getAssessmentResults to prevent errors in demo/dev mode -->
+    <script>
+    if (!window.assessmentStateManager) window.assessmentStateManager = {};
+    if (typeof window.assessmentStateManager.getAssessmentResults !== 'function') {
+        window.assessmentStateManager.getAssessmentResults = function() {
+            // Return dummy data or do nothing
+            return {};
+        };
+    }
+    </script>
+
+    <script>
+    // --- FORCE DEMO USER FOR TESTING ---
+    (function ensureDemoUser() {
+      if (!localStorage.getItem('demoUser')) {
+        localStorage.setItem('demoUser', JSON.stringify({email: 'demo@example.com'}));
+      }
+    })();
+    
+    // --- DEMO BUTTON VISIBILITY LOGIC ---
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if user is a demo user
+        function isDemoUser() {
+            try {
+                const demoUser = localStorage.getItem('demoUser');
+                if (demoUser) {
+                    const user = JSON.parse(demoUser);
+                    return !!user.email;
+                }
+            } catch (e) {
+                console.error('Error parsing demo user:', e);
+            }
+            return false;
+        }
+        
+        // Show demo actions if user is a demo user
+        function showDemoActions() {
+            const demoActions = document.getElementById('demoActions');
+            if (demoActions && isDemoUser()) {
+                demoActions.style.display = 'flex';
+                console.log('✅ Demo actions shown for demo user');
+                
+                // Set up toggle functionality
+                const toggleBtn = document.getElementById('toggleDemoResultsBtn');
+                if (toggleBtn) {
+                    let showingDemoResults = false;
+                    
+                    toggleBtn.addEventListener('click', function() {
+                        console.log('🔄 Demo toggle button clicked');
+                        if (showingDemoResults) {
+                            // Show real results (if any) or empty state
+                            console.log('📊 Showing real results');
+                            if (typeof loadAssessmentResults === 'function') {
+                                loadAssessmentResults();
+                            }
+                            toggleBtn.textContent = '🧪 Show Demo Results';
+                        } else {
+                            // Show demo results
+                            console.log('🧪 Showing demo results');
+                            if (typeof renderDashboardResultsUI === 'function') {
+                                // Create demo results data
+                                const demoResults = {
+                                    id: 'demo-assessment-' + Date.now(),
+                                    userId: 'demo-user',
+                                    totalScore: 85,
+                                    completionDate: new Date().toLocaleDateString(),
+                                    questionsAnswered: 25,
+                                    scores: {
+                                        'V': 78,  // Verity
+                                        'A': 82,  // Association
+                                        'L': 75,  // Lived Experience
+                                        'I': 88,  // Institutional
+                                        'D': 80   // Desire
+                                    },
+                                    awareness: {
+                                        percent: 72,
+                                        flag: false
+                                    },
+                                    answers: {
+                                        'DT-01': 6, 'DT-02': 4, 'DT-03': 5, 'DT-04': 6, 'DT-05': 3,
+                                        'DT-06': 3, 'DT-07': 5, 'IG-01': 5, 'IG-02': 4, 'IG-03': 6,
+                                        'IG-04': 6, 'IG-05': 3, 'IG-06': 4, 'IG-07': 5, 'CB-01': 6,
+                                        'CB-02': 4, 'CB-03': 5, 'CB-04': 5, 'CB-05': 4, 'CB-06': 4,
+                                        'CB-07': 5, 'UP-01': 5, 'UP-02': 4, 'UP-03': 4, 'UP-04': 5
+                                    },
+                                    isTestData: true
+                                };
+                                renderDashboardResultsUI(demoResults);
+                            }
+                            toggleBtn.textContent = 'Show Real Results';
+                        }
+                        showingDemoResults = !showingDemoResults;
+                    });
+                }
+            } else {
+                console.log('❌ Demo actions not shown - user is not a demo user or element not found');
+            }
+        }
+        
+        // Initialize demo actions
+        showDemoActions();
+        
+        // Also show demo actions when My Results section is displayed
+        const originalShowSection = window.showSection;
+        window.showSection = function(sectionId) {
+            if (originalShowSection) {
+                originalShowSection(sectionId);
+            }
+            
+            // Show demo actions when My Results section is displayed
+            if (sectionId === 'dashboardResultsSection') {
+                setTimeout(showDemoActions, 100); // Small delay to ensure DOM is updated
+            }
+        };
+    });
     </script>
 </body>
 </html> 

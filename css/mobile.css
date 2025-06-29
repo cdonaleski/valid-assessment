@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /*
  * VALID Assessment Tool - Mobile Stylesheet
  * Purpose: Responsive styles for mobile and tablet devices.
@@ -11,7 +13,7 @@
  */
 
 /* Tablet Styles (768px and below) */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .app-container {
         padding: 1rem;
     }
@@ -56,7 +58,7 @@
 }
 
 /* Mobile Styles (480px and below) */
-@media (max-width: 480px) {
+@media (max-width: var(--breakpoint-mobile)) {
     .app-container {
         padding: 0.5rem;
     }

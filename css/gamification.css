@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /* Gamification (Decision Shuffle) Styles */
 .gamification-card {
     background: #f6f8fa;
@@ -108,7 +110,7 @@
 .gamification-btn.thumbs-down:hover {
     background: #475569;
 }
-@media (max-width: 900px) {
+@media (max-width: var(--breakpoint-medium)) {
     .gamification-content {
         flex-direction: column;
         gap: 1.5rem;
@@ -140,7 +142,7 @@
     color: #0D4E5C;
     z-index: 2;
 }
-@media (max-width: 900px) {
+@media (max-width: var(--breakpoint-medium)) {
     .gamification-vpts-tracker {
         position: static;
         margin: 0 auto 1rem auto;

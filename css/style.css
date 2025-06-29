@@ -1,3 +1,5 @@
+@import "variables.css";
+
 /*
  * VALID Assessment Tool - Professional Stylesheet
  * A premium business assessment interface with modern, trustworthy design
@@ -290,7 +292,7 @@ h2 {
     width: 100%;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: var(--breakpoint-large)) {
     .header-content {
         padding: 0 1.5rem;
     }
@@ -303,7 +305,7 @@ h2 {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .header-content {
         padding: 0 1rem;
         flex-direction: column;
@@ -748,7 +750,7 @@ h2 {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-tablet)) {
     .header-right {
         flex-wrap: wrap;
         gap: 0.5rem;
@@ -1150,7 +1152,7 @@ h2 {
 }
 
 /* Responsive Design */
-@media (max-width: 1100px) {
+@media (max-width: var(--breakpoint-large)) {
   #myDecisionsSection .decision-mockup-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1158,7 +1160,7 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 800px) {
+@media (max-width: var(--breakpoint-medium)) {
   #myDecisionsSection .decision-mockup-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
