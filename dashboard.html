@@ -125,12 +125,16 @@
                                 <div class="card-content">
                                     <div class="stats-grid">
                                         <div class="stat-item">
-                                            <div class="stat-number" id="validScore">--</div>
-                                            <div class="stat-label">Your Score</div>
+                                            <div class="stat-number" id="primaryValidator" style="font-size: 1.5rem; font-weight: 600; color: var(--verity-color);">Verity</div>
+                                            <div class="stat-label">Primary Validator</div>
                                         </div>
                                         <div class="stat-item">
-                                            <div class="stat-number" id="validTime">--</div>
-                                            <div class="stat-label">Time Taken</div>
+                                            <div class="stat-number" id="secondaryValidator" style="font-size: 1.2rem; font-weight: 500; color: var(--association-color);">Association</div>
+                                            <div class="stat-label">Secondary Validator</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-number" id="decisionMaturity">--</div>
+                                            <div class="stat-label">Decision Maturity</div>
                                         </div>
                                     </div>
                                     <button class="btn primary" onclick="showSection('dashboardResultsSection')">
@@ -2045,6 +2049,9 @@
             // Show the overview section by default
             showSection('overviewSection');
             
+            // Update VALID Assessment Card with user data
+            setTimeout(updateVALIDCard, 500); // Small delay to ensure assessment state manager is loaded
+            
             // Set up navigation event listeners
             const navItems = document.querySelectorAll('.sidebar-item');
             navItems.forEach(item => {
@@ -3062,6 +3069,75 @@
                 });
             }
         });
+
+        // Update VALID Assessment Card with user data
+        function updateVALIDCard() {
+            try {
+                // Get current user ID
+                const currentUser = window.assessmentStateManager?.getCurrentUserId();
+                if (!currentUser) return;
+
+                // Try to get results from localStorage
+                const localStorageKey = `assessment_results_${currentUser}`;
+                const storedResults = localStorage.getItem(localStorageKey);
+                
+                if (storedResults) {
+                    const results = JSON.parse(storedResults);
+                    const scores = results.scores || {};
+                    
+                    // Find primary and secondary validators
+                    const dimensionNames = {
+                        'V': 'Verity',
+                        'A': 'Association', 
+                        'L': 'Lived Experience',
+                        'I': 'Institutional',
+                        'D': 'Desire'
+                    };
+                    
+                    const dimensionColors = {
+                        'V': 'var(--verity-color)',
+                        'A': 'var(--association-color)',
+                        'L': 'var(--lived-color)',
+                        'I': 'var(--institutional-color)',
+                        'D': 'var(--desire-color)'
+                    };
+                    
+                    // Sort scores to find primary and secondary
+                    const sortedScores = Object.entries(scores).sort(([,a], [,b]) => b - a);
+                    const primary = sortedScores[0] || ['V', 0];
+                    const secondary = sortedScores[1] || ['A', 0];
+                    
+                    // Update primary validator
+                    const primaryElement = document.getElementById('primaryValidator');
+                    if (primaryElement) {
+                        primaryElement.textContent = dimensionNames[primary[0]];
+                        primaryElement.style.color = dimensionColors[primary[0]];
+                        primaryElement.style.fontSize = '1.5rem';
+                        primaryElement.style.fontWeight = '600';
+                    }
+                    
+                    // Update secondary validator
+                    const secondaryElement = document.getElementById('secondaryValidator');
+                    if (secondaryElement) {
+                        secondaryElement.textContent = dimensionNames[secondary[0]];
+                        secondaryElement.style.color = dimensionColors[secondary[0]];
+                        secondaryElement.style.fontSize = '1.2rem';
+                        secondaryElement.style.fontWeight = '500';
+                    }
+                    
+                    // Calculate decision maturity (average of top 3 scores)
+                    const top3Scores = sortedScores.slice(0, 3).map(([,score]) => score);
+                    const decisionMaturity = Math.round(top3Scores.reduce((a, b) => a + b, 0) / top3Scores.length);
+                    
+                    const maturityElement = document.getElementById('decisionMaturity');
+                    if (maturityElement) {
+                        maturityElement.textContent = `${decisionMaturity}%`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating VALID card:', error);
+            }
+        }
     </script>
 
     <!-- Dummy fallback for missing getAssessmentResults to prevent errors in demo/dev mode -->
