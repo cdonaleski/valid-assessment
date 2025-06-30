@@ -125,12 +125,8 @@
                                 <div class="card-content">
                                     <div class="stats-grid">
                                         <div class="stat-item">
-                                            <div class="stat-number" id="primaryValidator" style="font-size: 1.5rem; font-weight: 600; color: var(--verity-color);">Verity</div>
-                                            <div class="stat-label">Primary Validator</div>
-                                        </div>
-                                        <div class="stat-item">
-                                            <div class="stat-number" id="secondaryValidator" style="font-size: 1.2rem; font-weight: 500; color: var(--association-color);">Association</div>
-                                            <div class="stat-label">Secondary Validator</div>
+                                            <div class="stat-number" id="validatorCombo" style="font-size: 2rem; font-weight: 700; color: var(--verity-color);">VL</div>
+                                            <div class="stat-label">Primary + Secondary</div>
                                         </div>
                                         <div class="stat-item">
                                             <div class="stat-number" id="decisionMaturity">--</div>
@@ -3107,22 +3103,14 @@
                     const primary = sortedScores[0] || ['V', 0];
                     const secondary = sortedScores[1] || ['A', 0];
                     
-                    // Update primary validator
-                    const primaryElement = document.getElementById('primaryValidator');
-                    if (primaryElement) {
-                        primaryElement.textContent = dimensionNames[primary[0]];
-                        primaryElement.style.color = dimensionColors[primary[0]];
-                        primaryElement.style.fontSize = '1.5rem';
-                        primaryElement.style.fontWeight = '600';
-                    }
-                    
-                    // Update secondary validator
-                    const secondaryElement = document.getElementById('secondaryValidator');
-                    if (secondaryElement) {
-                        secondaryElement.textContent = dimensionNames[secondary[0]];
-                        secondaryElement.style.color = dimensionColors[secondary[0]];
-                        secondaryElement.style.fontSize = '1.2rem';
-                        secondaryElement.style.fontWeight = '500';
+                    // Update combined validator letters
+                    const comboElement = document.getElementById('validatorCombo');
+                    if (comboElement) {
+                        const combo = primary[0] + secondary[0]; // e.g., "VL"
+                        comboElement.textContent = combo;
+                        comboElement.style.color = dimensionColors[primary[0]];
+                        comboElement.style.fontSize = '2rem';
+                        comboElement.style.fontWeight = '700';
                     }
                     
                     // Calculate decision maturity (average of top 3 scores)
