@@ -3228,12 +3228,6 @@
                         if (window.demoMode.showingDemoResults) {
                             // Show real results (if any) or empty state
                             console.log('📊 Showing real results');
-                            
-                            // Restore original user ID function if it was overridden
-                            if (window.assessmentStateManager && window.assessmentStateManager._originalGetCurrentUserId) {
-                                window.assessmentStateManager.getCurrentUserId = window.assessmentStateManager._originalGetCurrentUserId;
-                            }
-                            
                             if (typeof loadAssessmentResults === 'function') {
                                 loadAssessmentResults();
                             }
@@ -3269,26 +3263,8 @@
                                         'CB-02': 4, 'CB-03': 5, 'CB-04': 5, 'CB-05': 4, 'CB-06': 4,
                                         'CB-07': 5, 'UP-01': 5, 'UP-02': 4, 'UP-03': 4, 'UP-04': 5
                                     },
-                                    isTestData: true,
-                                    currentScenario: 'general'
+                                    isTestData: true
                                 };
-                                
-                                // Store demo results in localStorage so context filter can work
-                                const demoUserId = 'demo-user';
-                                const localStorageKey = `assessment_results_${demoUserId}`;
-                                localStorage.setItem(localStorageKey, JSON.stringify(demoResults));
-                                
-                                // Temporarily set the current user ID for demo mode
-                                if (window.assessmentStateManager) {
-                                    // Store original function if not already stored
-                                    if (!window.assessmentStateManager._originalGetCurrentUserId) {
-                                        window.assessmentStateManager._originalGetCurrentUserId = window.assessmentStateManager.getCurrentUserId;
-                                    }
-                                    window.assessmentStateManager.getCurrentUserId = function() {
-                                        return demoUserId;
-                                    };
-                                }
-                                
                                 renderDashboardResultsUI(demoResults);
                             }
                             newToggleBtn.textContent = 'Show Real Results';
