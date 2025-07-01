@@ -1,0 +1,398 @@
+<!--
+    VALID Assessment Tool - Administrator Interface
+    Purpose: Secure administrative dashboard for managing the VALID assessment system.
+    Features include user management, assessment configuration, and results analysis.
+    Target Users: Assessment administrators and authorized personnel only.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-page">
+    <!-- Password Protection Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-container">
+            <h2>Admin Access</h2>
+            <input type="password" id="adminPassword" placeholder="Enter password">
+            <button onclick="handleLogin()" id="loginButton" class="btn btn-primary">Login</button>
+            <div id="loginError" class="error-message" style="display: none; color: red; margin-top: 10px;"></div>
+            <div id="debugInfo" class="debug-info" style="margin-top: 20px; text-align: left; font-size: 12px; color: #666;"></div>
+        </div>
+    </div>
+
+    <div class="app-container admin-dashboard" style="display: none;">
+        <header class="admin-header">
+            <h1>VALID Assessment Dashboard</h1>
+            <div class="date-filter">
+                <label>Date Range:</label>
+                <select id="dateRange" onchange="updateDashboard()">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+        </header>
+
+        <main class="content-card">
+            <!-- Overview Stats -->
+            <section class="overview-stats">
+                <h2>Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Assessments</h3>
+                        <div class="stat-value" id="totalAssessments">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Completion Rate</h3>
+                        <div class="stat-value" id="completionRate">--%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg. Time</h3>
+                        <div class="stat-value" id="avgTime">-- min</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Users</h3>
+                        <div class="stat-value" id="activeUsers">--</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="data-visualization">
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3>Persona Distribution</h3>
+                        <canvas id="personaChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Score Distributions</h3>
+                        <canvas id="scoresChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Industry Breakdown</h3>
+                        <canvas id="industryChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Completion Trends</h3>
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Completions -->
+            <section class="recent-data">
+                <div class="section-header">
+                    <h2>Recent Completions</h2>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        Export Data (CSV)
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>ID</th>
+                                <th>Persona</th>
+                                <th>Industry</th>
+                                <th>Role</th>
+                                <th>V</th>
+                                <th>A</th>
+                                <th>L</th>
+                                <th>I</th>
+                                <th>D</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentData">
+                            <!-- Data will be populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Simple password protection
+        const ADMIN_PASSWORD = 'valid2024';
+
+        function handleLogin() {
+            console.log('Login button clicked');
+            document.getElementById('loginError').textContent = 'Processing login...';
+            document.getElementById('loginError').style.display = 'block';
+            
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('loginError').textContent = 'Password correct! Loading dashboard...';
+                document.getElementById('authOverlay').style.display = 'none';
+                document.querySelector('.admin-dashboard').style.display = 'block';
+                loadDashboardData();
+            } else {
+                document.getElementById('loginError').textContent = 'Invalid password';
+            }
+        }
+
+        // Add enter key handler
+        document.getElementById('adminPassword').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                handleLogin();
+            }
+        });
+    </script>
+
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/database.js"></script>
+    <script src="js/admin-debug.js"></script>
+    <script type="module">
+        import {
+            calculateAverageTime,
+            calculatePersonaDistribution,
+            calculateScoreDistributions,
+            calculateIndustryBreakdown,
+            calculateCompletionTrends,
+            formatDataForExport
+        } from '/js/admin-utils.js';
+
+        // Make loadDashboardData available globally
+        window.loadDashboardData = async function() {
+            try {
+                const dateRange = document.getElementById('dateRange').value;
+                const data = await fetchDashboardData(dateRange);
+                
+                updateOverviewStats(data);
+                updateCharts(data);
+                updateRecentData(data.recentCompletions);
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                alert('Error loading dashboard data');
+            }
+        }
+
+        // Export functionality
+        document.querySelector('.btn-secondary').addEventListener('click', () => {
+            const dateRange = document.getElementById('dateRange').value;
+            fetchDashboardData(dateRange).then(data => {
+                const csvContent = formatDataForExport(data.recentCompletions);
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `valid_data_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+            });
+        });
+
+        // Date range change handler
+        document.getElementById('dateRange').addEventListener('change', loadDashboardData);
+
+        /**
+         * Fetch data from Supabase
+         */
+        async function fetchDashboardData(dateRange) {
+            try {
+                const daysAgo = parseInt(dateRange);
+                const startDate = daysAgo ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000) : null;
+                
+                // Fetch from Supabase
+                const query = supabase
+                    .from('assessments')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (startDate) {
+                    query.gte('created_at', startDate.toISOString());
+                }
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                return processData(data);
+            } catch (error) {
+                console.error('Supabase query error:', error);
+                throw new Error('Failed to fetch data from database');
+            }
+        }
+
+        /**
+         * Process raw data into dashboard metrics
+         */
+        function processData(rawData) {
+            // Calculate overview stats
+            const total = rawData.length;
+            const completed = rawData.filter(r => r.completed).length;
+            const completionRate = (completed / total * 100).toFixed(1);
+            const avgTime = calculateAverageTime(rawData);
+
+            // Process for charts
+            const personaDistribution = calculatePersonaDistribution(rawData);
+            const scoreDistributions = calculateScoreDistributions(rawData);
+            const industryBreakdown = calculateIndustryBreakdown(rawData);
+            const completionTrends = calculateCompletionTrends(rawData);
+
+            return {
+                overview: {
+                    total,
+                    completionRate,
+                    avgTime,
+                    activeUsers: completed
+                },
+                charts: {
+                    personaDistribution,
+                    scoreDistributions,
+                    industryBreakdown,
+                    completionTrends
+                },
+                recentCompletions: rawData.slice(0, 10) // Last 10 completions
+            };
+        }
+
+        /**
+         * Update overview statistics display
+         */
+        function updateOverviewStats(data) {
+            const { overview } = data;
+            document.getElementById('totalAssessments').textContent = overview.total;
+            document.getElementById('completionRate').textContent = `${overview.completionRate}%`;
+            document.getElementById('avgTime').textContent = `${overview.avgTime} min`;
+            document.getElementById('activeUsers').textContent = overview.activeUsers;
+        }
+
+        /**
+         * Update all charts with new data
+         */
+        function updateCharts(data) {
+            const { charts } = data;
+            
+            // Clear existing charts if they exist
+            ['personaChart', 'scoresChart', 'industryChart', 'trendsChart'].forEach(id => {
+                const canvas = document.getElementById(id);
+                const chart = Chart.getChart(canvas);
+                if (chart) {
+                    chart.destroy();
+                }
+            });
+            
+            // Persona Distribution Chart
+            new Chart(document.getElementById('personaChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(charts.personaDistribution),
+                    datasets: [{
+                        data: Object.values(charts.personaDistribution),
+                        backgroundColor: [
+                            '#3498db',
+                            '#2ecc71',
+                            '#e74c3c',
+                            '#f1c40f',
+                            '#9b59b6',
+                            '#34495e',
+                            '#1abc9c'
+                        ]
+                    }]
+                }
+            });
+
+            // Score Distributions Chart
+            new Chart(document.getElementById('scoresChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['V', 'A', 'L', 'I', 'D'],
+                    datasets: [{
+                        label: 'Average Scores',
+                        data: charts.scoreDistributions,
+                        backgroundColor: 'rgba(52, 152, 219, 0.6)'
+                    }]
+                }
+            });
+
+            // Industry Breakdown Chart
+            new Chart(document.getElementById('industryChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(charts.industryBreakdown),
+                    datasets: [{
+                        data: Object.values(charts.industryBreakdown),
+                        backgroundColor: [
+                            '#3498db',
+                            '#2ecc71',
+                            '#e74c3c',
+                            '#f1c40f',
+                            '#9b59b6',
+                            '#34495e',
+                            '#1abc9c',
+                            '#16a085',
+                            '#d35400',
+                            '#8e44ad'
+                        ]
+                    }]
+                }
+            });
+
+            // Completion Trends Chart
+            new Chart(document.getElementById('trendsChart'), {
+                type: 'line',
+                data: {
+                    labels: charts.completionTrends.labels,
+                    datasets: [{
+                        label: 'Completions',
+                        data: charts.completionTrends.data,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Update recent completions table
+         */
+        function updateRecentData(recentData) {
+            const tbody = document.getElementById('recentData');
+            tbody.innerHTML = recentData.map(record => `
+                <tr>
+                    <td>${new Date(record.created_at).toLocaleDateString()}</td>
+                    <td>${record.id.slice(-6)}</td>
+                    <td>${record.persona || '-'}</td>
+                    <td>${record.industry || '-'}</td>
+                    <td>${record.role || '-'}</td>
+                    <td>${record.scores?.V || '-'}</td>
+                    <td>${record.scores?.A || '-'}</td>
+                    <td>${record.scores?.L || '-'}</td>
+                    <td>${record.scores?.I || '-'}</td>
+                    <td>${record.scores?.D || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Initial load if hash is present
+        if (location.hash === '#admin') {
+            document.getElementById('authOverlay').style.display = 'none';
+            document.querySelector('.admin-dashboard').style.display = 'block';
+            loadDashboardData();
+        }
+    </script>
+</body>
+</html> 

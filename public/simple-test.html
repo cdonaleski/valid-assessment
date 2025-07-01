@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Scoring Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>Simple Scoring Test</h1>
+    <button onclick="testScoring()">Test Scoring Function</button>
+    <div id="results"></div>
+
+    <script type="module">
+        async function testScoring() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                console.log('Starting scoring test...');
+                
+                // Test 1: Import questions data
+                const questionsData = await import('/js/questions-data.js');
+                console.log('Questions data imported:', questionsData);
+                
+                // Test 2: Import scoring function
+                const { calculateRawScoresV2 } = await import('/js/scoring.js');
+                console.log('Scoring function imported:', calculateRawScoresV2);
+                
+                // Test 3: Test with sample data
+                const testAnswers = {
+                    "DT-01": 6,
+                    "DT-02": 4,
+                    "DT-03": 5,
+                    "DT-04": 6,
+                    "DT-05": 3
+                };
+                
+                console.log('Test answers:', testAnswers);
+                const result = calculateRawScoresV2(testAnswers);
+                console.log('Scoring result:', result);
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ Scoring Test Successful</h3>
+                        <p><strong>Raw Scores:</strong> ${JSON.stringify(result.raw)}</p>
+                        <p><strong>Percentages:</strong> ${JSON.stringify(result.percent)}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Scoring test failed:', error);
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Scoring Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Stack:</strong> ${error.stack}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Make function globally available
+        window.testScoring = testScoring;
+    </script>
+</body>
+</html> 

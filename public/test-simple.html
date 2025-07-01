@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Assessment Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .scale-button {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .scale-button:hover {
+            background: #e9ecef;
+        }
+        .scale-button.selected {
+            background: #007bff;
+            color: white;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Assessment Test</h1>
+    
+    <div class="test-section">
+        <h2>Button Interaction Test</h2>
+        <button class="btn" onclick="testButton('Test Button 1')">Test Button 1</button>
+        <button class="btn" onclick="testButton('Test Button 2')">Test Button 2</button>
+        <button class="btn" id="disabledBtn" disabled onclick="testButton('Disabled Button')">Disabled Button</button>
+        <div id="buttonLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Scale Button Test</h2>
+        <div>
+            <button class="scale-button" data-value="1" onclick="testScaleButton(1)">1</button>
+            <button class="scale-button" data-value="2" onclick="testScaleButton(2)">2</button>
+            <button class="scale-button" data-value="3" onclick="testScaleButton(3)">3</button>
+            <button class="scale-button" data-value="4" onclick="testScaleButton(4)">4</button>
+            <button class="scale-button" data-value="5" onclick="testScaleButton(5)">5</button>
+        </div>
+        <div id="scaleLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Auto-Advance Test</h2>
+        <label>
+            <input type="checkbox" id="autoAdvance" onchange="testAutoAdvance()">
+            Auto-advance to next question
+        </label>
+        <div>
+            <button class="btn" id="nextBtn" disabled onclick="testNext()">Next »</button>
+        </div>
+        <div id="autoAdvanceLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>CSS Test</h2>
+        <div id="cssTest" class="log"></div>
+        <button class="btn" onclick="testCSS()">Test CSS</button>
+    </div>
+
+    <script>
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML += `[${timestamp}] ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function testButton(buttonName) {
+            log('buttonLog', `✓ ${buttonName} clicked successfully`);
+        }
+
+        function testScaleButton(value) {
+            // Clear previous selections
+            document.querySelectorAll('.scale-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Select clicked button
+            const clickedButton = document.querySelector(`[data-value="${value}"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('selected');
+            }
+            
+            // Enable next button
+            const nextBtn = document.getElementById('nextBtn');
+            nextBtn.disabled = false;
+            
+            log('scaleLog', `✓ Scale button ${value} selected`);
+            log('scaleLog', `✓ Next button enabled`);
+            
+            // Test auto-advance
+            const autoAdvance = document.getElementById('autoAdvance');
+            if (autoAdvance.checked) {
+                log('scaleLog', `⚠ Auto-advance enabled - would auto-advance in 500ms`);
+            } else {
+                log('scaleLog', `✓ Auto-advance disabled - manual navigation required`);
+            }
+        }
+
+        function testAutoAdvance() {
+            const autoAdvance = document.getElementById('autoAdvance');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (autoAdvance.checked) {
+                nextBtn.disabled = true;
+                log('autoAdvanceLog', `✓ Auto-advance enabled, Next button disabled`);
+            } else {
+                // Only enable if we have a selection
+                const hasSelection = document.querySelector('.scale-button.selected');
+                nextBtn.disabled = !hasSelection;
+                log('autoAdvanceLog', `✓ Auto-advance disabled, Next button ${hasSelection ? 'enabled' : 'disabled'}`);
+            }
+        }
+
+        function testNext() {
+            log('autoAdvanceLog', `✓ Next button clicked - would advance to next question`);
+            
+            // Simulate advancing
+            document.querySelectorAll('.scale-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('nextBtn').disabled = true;
+            
+            log('autoAdvanceLog', `✓ Question advanced, selections cleared`);
+        }
+
+        function testCSS() {
+            const cssTest = document.getElementById('cssTest');
+            cssTest.innerHTML = '';
+            
+            // Test button styles
+            const testBtn = document.createElement('button');
+            testBtn.className = 'btn';
+            testBtn.textContent = 'Test';
+            document.body.appendChild(testBtn);
+            
+            const computedStyle = window.getComputedStyle(testBtn);
+            log('cssTest', 'Button computed styles:');
+            log('cssTest', `  - display: ${computedStyle.display}`);
+            log('cssTest', `  - position: ${computedStyle.position}`);
+            log('cssTest', `  - z-index: ${computedStyle.zIndex}`);
+            log('cssTest', `  - pointer-events: ${computedStyle.pointerEvents}`);
+            log('cssTest', `  - cursor: ${computedStyle.cursor}`);
+            log('cssTest', `  - opacity: ${computedStyle.opacity}`);
+            
+            document.body.removeChild(testBtn);
+            
+            // Test scale button styles
+            const testScaleBtn = document.createElement('button');
+            testScaleBtn.className = 'scale-button';
+            testScaleBtn.textContent = 'Test Scale';
+            document.body.appendChild(testScaleBtn);
+            
+            const scaleComputedStyle = window.getComputedStyle(testScaleBtn);
+            log('cssTest', 'Scale button computed styles:');
+            log('cssTest', `  - display: ${scaleComputedStyle.display}`);
+            log('cssTest', `  - pointer-events: ${scaleComputedStyle.pointerEvents}`);
+            log('cssTest', `  - cursor: ${scaleComputedStyle.cursor}`);
+            
+            document.body.removeChild(testScaleBtn);
+        }
+
+        // Auto-run CSS test on load
+        window.addEventListener('load', () => {
+            setTimeout(testCSS, 1000);
+        });
+    </script>
+</body>
+</html> 

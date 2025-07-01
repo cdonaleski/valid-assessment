@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+        .warning {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <h1>Assessment Debug Test</h1>
+    
+    <div class="debug-section">
+        <h2>Environment Check</h2>
+        <div id="envCheck" class="log"></div>
+        <button class="test-button" onclick="checkEnvironment()">Check Environment</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>CSS Conflicts Check</h2>
+        <div id="cssCheck" class="log"></div>
+        <button class="test-button" onclick="checkCSSConflicts()">Check CSS Conflicts</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Assessment Controller Test</h2>
+        <div id="controllerTest" class="log"></div>
+        <button class="test-button" onclick="testController()">Test Controller</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Event Handlers Test</h2>
+        <div id="eventTest" class="log"></div>
+        <button class="test-button" onclick="testEventHandlers()">Test Event Handlers</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Auto-Advance Test</h2>
+        <div id="autoAdvanceTest" class="log"></div>
+        <button class="test-button" onclick="testAutoAdvance()">Test Auto-Advance</button>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function checkEnvironment() {
+            const envCheck = document.getElementById('envCheck');
+            envCheck.innerHTML = '';
+            
+            log('envCheck', 'Checking environment...', 'info');
+            
+            // Check if main files are loaded
+            const scripts = [
+                'js/main.js',
+                'js/app.js',
+                'js/assessment-controller.js',
+                'js/event-handlers.js',
+                'js/assessment-manager.js',
+                'js/state-manager.js'
+            ];
+            
+            scripts.forEach(script => {
+                const scriptElement = document.querySelector(`script[src="${script}"]`);
+                if (scriptElement) {
+                    log('envCheck', `✓ ${script} loaded`, 'success');
+                } else {
+                    log('envCheck', `✗ ${script} not found`, 'error');
+                }
+            });
+            
+            // Check global objects
+            if (window.assessmentController) {
+                log('envCheck', '✓ assessmentController available', 'success');
+            } else {
+                log('envCheck', '✗ assessmentController not available', 'error');
+            }
+            
+            if (window.assessmentManager) {
+                log('envCheck', '✓ assessmentManager available', 'success');
+            } else {
+                log('envCheck', '✗ assessmentManager not available', 'error');
+            }
+        }
+
+        function checkCSSConflicts() {
+            const cssCheck = document.getElementById('cssCheck');
+            cssCheck.innerHTML = '';
+            
+            log('cssCheck', 'Checking CSS conflicts...', 'info');
+            
+            // Check if CSS files are loaded
+            const stylesheets = [
+                'css/style.css',
+                'css/components.css',
+                'css/layout.css',
+                'css/mobile.css'
+            ];
+            
+            stylesheets.forEach(sheet => {
+                const linkElement = document.querySelector(`link[href="${sheet}"]`);
+                if (linkElement) {
+                    log('cssCheck', `✓ ${sheet} loaded`, 'success');
+                } else {
+                    log('cssCheck', `✗ ${sheet} not found`, 'error');
+                }
+            });
+            
+            // Check for conflicting button styles
+            const testButton = document.createElement('button');
+            testButton.className = 'btn btn-primary';
+            testButton.textContent = 'Test';
+            document.body.appendChild(testButton);
+            
+            const computedStyle = window.getComputedStyle(testButton);
+            log('cssCheck', `Button computed styles:`, 'info');
+            log('cssCheck', `  - display: ${computedStyle.display}`, 'info');
+            log('cssCheck', `  - position: ${computedStyle.position}`, 'info');
+            log('cssCheck', `  - z-index: ${computedStyle.zIndex}`, 'info');
+            log('cssCheck', `  - pointer-events: ${computedStyle.pointerEvents}`, 'info');
+            log('cssCheck', `  - cursor: ${computedStyle.cursor}`, 'info');
+            
+            document.body.removeChild(testButton);
+        }
+
+        function testController() {
+            const controllerTest = document.getElementById('controllerTest');
+            controllerTest.innerHTML = '';
+            
+            log('controllerTest', 'Testing assessment controller...', 'info');
+            
+            if (!window.assessmentController) {
+                log('controllerTest', '✗ Controller not available', 'error');
+                return;
+            }
+            
+            const controller = window.assessmentController;
+            
+            // Test controller state
+            log('controllerTest', `Controller state:`, 'info');
+            log('controllerTest', `  - isInitialized: ${controller.state?.isInitialized}`, 'info');
+            log('controllerTest', `  - currentSection: ${controller.currentSection}`, 'info');
+            log('controllerTest', `  - sections: ${controller.sections?.join(', ')}`, 'info');
+            
+            // Test state manager
+            if (controller.stateManager) {
+                const state = controller.stateManager.getState();
+                log('controllerTest', `State manager state:`, 'info');
+                log('controllerTest', `  - isInitialized: ${state?.isInitialized}`, 'info');
+                log('controllerTest', `  - currentSection: ${state?.currentSection}`, 'info');
+                log('controllerTest', `  - autoAdvance: ${state?.autoAdvance}`, 'info');
+            } else {
+                log('controllerTest', '✗ State manager not available', 'error');
+            }
+            
+            // Test assessment manager
+            if (controller.assessmentManager) {
+                log('controllerTest', `Assessment manager:`, 'info');
+                log('controllerTest', `  - questions loaded: ${controller.assessmentManager.questions?.length || 0}`, 'info');
+            } else {
+                log('controllerTest', '✗ Assessment manager not available', 'error');
+            }
+        }
+
+        function testEventHandlers() {
+            const eventTest = document.getElementById('eventTest');
+            eventTest.innerHTML = '';
+            
+            log('eventTest', 'Testing event handlers...', 'info');
+            
+            // Check if key elements exist
+            const elements = [
+                'startAssessment',
+                'demographicsForm',
+                'autoAdvance',
+                'nextQuestion',
+                'prevQuestion'
+            ];
+            
+            elements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    log('eventTest', `✓ ${elementId} exists`, 'success');
+                    
+                    // Check if element is visible and clickable
+                    const style = window.getComputedStyle(element);
+                    const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
+                    const isClickable = style.pointerEvents !== 'none';
+                    
+                    if (isVisible) {
+                        log('eventTest', `  - ${elementId} is visible`, 'success');
+                    } else {
+                        log('eventTest', `  - ${elementId} is not visible`, 'warning');
+                    }
+                    
+                    if (isClickable) {
+                        log('eventTest', `  - ${elementId} is clickable`, 'success');
+                    } else {
+                        log('eventTest', `  - ${elementId} is not clickable`, 'warning');
+                    }
+                } else {
+                    log('eventTest', `✗ ${elementId} not found`, 'error');
+                }
+            });
+        }
+
+        function testAutoAdvance() {
+            const autoAdvanceTest = document.getElementById('autoAdvanceTest');
+            autoAdvanceTest.innerHTML = '';
+            
+            log('autoAdvanceTest', 'Testing auto-advance functionality...', 'info');
+            
+            if (!window.assessmentController) {
+                log('autoAdvanceTest', '✗ Controller not available', 'error');
+                return;
+            }
+            
+            const controller = window.assessmentController;
+            const state = controller.stateManager?.getState();
+            
+            if (state) {
+                log('autoAdvanceTest', `Current auto-advance setting: ${state.autoAdvance}`, 'info');
+                
+                // Test auto-advance toggle
+                const autoAdvanceToggle = document.getElementById('autoAdvance');
+                if (autoAdvanceToggle) {
+                    log('autoAdvanceTest', '✓ Auto-advance toggle found', 'success');
+                    log('autoAdvanceTest', `Toggle checked: ${autoAdvanceToggle.checked}`, 'info');
+                    
+                    // Test toggle functionality
+                    const originalState = autoAdvanceToggle.checked;
+                    autoAdvanceToggle.checked = !originalState;
+                    autoAdvanceToggle.dispatchEvent(new Event('change'));
+                    
+                    setTimeout(() => {
+                        const newState = controller.stateManager?.getState();
+                        log('autoAdvanceTest', `After toggle - autoAdvance: ${newState?.autoAdvance}`, 'info');
+                        
+                        // Reset to original state
+                        autoAdvanceToggle.checked = originalState;
+                        autoAdvanceToggle.dispatchEvent(new Event('change'));
+                    }, 100);
+                } else {
+                    log('autoAdvanceTest', '✗ Auto-advance toggle not found', 'error');
+                }
+            } else {
+                log('autoAdvanceTest', '✗ State not available', 'error');
+            }
+        }
+
+        // Auto-run environment check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkEnvironment, 1000);
+        });
+    </script>
+</body>
+</html> 
