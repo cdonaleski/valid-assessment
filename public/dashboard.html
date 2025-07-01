@@ -482,7 +482,7 @@
                     <div id="dashboardResultsSection" class="dashboard-section" style="display: none;">
                         <div class="actions-section" style="margin-bottom: 2rem; justify-content: flex-end;">
                             <div id="demoActions" style="display: flex; align-items: center; gap: 1rem;">
-                                <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444;">
+                                <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444; min-width: 180px;">
                                     🧪 Show Demo Results
                                 </button>
                             </div>
@@ -1635,6 +1635,44 @@
             if (!results) {
                 resultsSection.innerHTML = `
                     <div class="my-results-section">
+                        <div class="actions-section" style="margin-bottom: 2rem; justify-content: flex-end;">
+                            <div id="demoActions" style="display: flex; align-items: center; gap: 1rem;">
+                                <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444; min-width: 180px;">
+                                    🧪 Show Demo Results
+                                </button>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn primary dropdown-toggle" id="downloadButton">
+                                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                        <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                    </svg>
+                                    Download
+                                    <svg class="caret" viewBox="0 0 24 24" width="12" height="12">
+                                        <path fill="currentColor" d="M7 10l5 5 5-5z"></path>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu" id="downloadMenu">
+                                    <button class="dropdown-item" id="printButton">
+                                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                            <path fill="currentColor" d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"></path>
+                                        </svg>
+                                        Print Report
+                                    </button>
+                                    <button class="dropdown-item" id="exportJSONButton">
+                                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                            <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
+                                        </svg>
+                                        Export JSON
+                                    </button>
+                                    <button class="dropdown-item" id="emailButton">
+                                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                            <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"></path>
+                                        </svg>
+                                        Send via Email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <h1>Your VALID Assessment Results</h1>
                         <p class="description">This analysis provides insights into your decision-making style and preferences across the five VALID dimensions.</p>
                         <div class="alert" style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
@@ -1642,6 +1680,12 @@
                         </div>
                     </div>
                 `;
+                // Initialize demo actions after empty state is rendered
+                setTimeout(() => {
+                    if (typeof showDemoActions === 'function') {
+                        showDemoActions();
+                    }
+                }, 100);
                 return;
             }
 
@@ -1702,6 +1746,44 @@
 
             resultsSection.innerHTML = `
                 <div class="my-results-section">
+                    <div class="actions-section" style="margin-bottom: 2rem; justify-content: flex-end;">
+                        <div id="demoActions" style="display: flex; align-items: center; gap: 1rem;">
+                            <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444; min-width: 180px;">
+                                🧪 Show Demo Results
+                            </button>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn primary dropdown-toggle" id="downloadButton">
+                                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                </svg>
+                                Download
+                                <svg class="caret" viewBox="0 0 24 24" width="12" height="12">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"></path>
+                                </svg>
+                            </button>
+                            <div class="dropdown-menu" id="downloadMenu">
+                                <button class="dropdown-item" id="printButton">
+                                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                        <path fill="currentColor" d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"></path>
+                                    </svg>
+                                    Print Report
+                                </button>
+                                <button class="dropdown-item" id="exportJSONButton">
+                                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                        <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
+                                    </svg>
+                                    Export JSON
+                                </button>
+                                <button class="dropdown-item" id="emailButton">
+                                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                        <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"></path>
+                                    </svg>
+                                    Send via Email
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <h1>Your VALID Assessment Results</h1>
                     <p class="description">This analysis provides insights into your decision-making style and preferences across the five VALID dimensions.</p>
                     <div class="alert"><strong>Real Data:</strong> Your assessment results based on your actual responses.<br><span style="font-weight:400;">Based on ${results.questionsAnswered || 25} question responses.</span></div>
@@ -1820,6 +1902,10 @@
             // Initialize radar chart after DOM is updated
             setTimeout(() => {
                 initializeRadarChart(scores);
+                // Re-initialize demo actions after DOM is updated
+                if (typeof showDemoActions === 'function') {
+                    showDemoActions();
+                }
             }, 100);
         }
 
@@ -3023,37 +3109,7 @@
             return false;
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const demoActions = document.getElementById('demoActions');
-            const toggleBtn = document.getElementById('toggleDemoResultsBtn');
-            if (demoActions && toggleBtn) {
-                demoActions.style.display = 'flex';
-                let showingDemoResults = false;
-                toggleBtn.addEventListener('click', function() {
-                    if (showingDemoResults) {
-                        // Show real results (if any)
-                        if (typeof hasCompletedAssessment === 'function' && hasCompletedAssessment()) {
-                            if (typeof loadAssessmentResults === 'function') {
-                                loadAssessmentResults();
-                            }
-                        } else {
-                            // If no real results, show empty/fallback UI
-                            if (typeof renderDashboardResultsUI === 'function') {
-                                renderDashboardResultsUI({ isTestData: false });
-                            }
-                        }
-                        toggleBtn.textContent = '🧪 Show Demo Results';
-                    } else {
-                        // Show demo results
-                        if (typeof renderDashboardResultsUI === 'function') {
-                            renderDashboardResultsUI({ isTestData: true });
-                        }
-                        toggleBtn.textContent = 'Show Real Results';
-                    }
-                    showingDemoResults = !showingDemoResults;
-                });
-            }
-        });
+
 
         // Update VALID Assessment Card with user data
         function updateVALIDCard() {
@@ -3138,41 +3194,52 @@
     
     // --- DEMO BUTTON VISIBILITY LOGIC ---
     document.addEventListener('DOMContentLoaded', function() {
-        // Check if user is a demo user
-        function isDemoUser() {
-            try {
-                const demoUser = localStorage.getItem('demoUser');
-                if (demoUser) {
-                    const user = JSON.parse(demoUser);
-                    return !!user.email;
-                }
-            } catch (e) {
-                console.error('Error parsing demo user:', e);
-            }
-            return false;
-        }
+        // Global state to track demo mode
+        window.demoMode = {
+            showingDemoResults: false,
+            toggleButton: null
+        };
         
-        // Show demo actions if user is a demo user
-        function showDemoActions() {
+        // Show demo actions for all users
+        window.showDemoActions = function() {
             const demoActions = document.getElementById('demoActions');
-            if (demoActions && isDemoUser()) {
+            if (demoActions) {
                 demoActions.style.display = 'flex';
-                console.log('✅ Demo actions shown for demo user');
+                console.log('✅ Demo actions shown for all users');
                 
                 // Set up toggle functionality
                 const toggleBtn = document.getElementById('toggleDemoResultsBtn');
                 if (toggleBtn) {
-                    let showingDemoResults = false;
+                    // Remove any existing event listeners to prevent duplicates
+                    const newToggleBtn = toggleBtn.cloneNode(true);
+                    toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
                     
-                    toggleBtn.addEventListener('click', function() {
-                        console.log('🔄 Demo toggle button clicked');
-                        if (showingDemoResults) {
+                    // Update the global reference
+                    window.demoMode.toggleButton = newToggleBtn;
+                    
+                    // Set initial button text and styling based on current state
+                    newToggleBtn.textContent = window.demoMode.showingDemoResults ? 'Show Real Results' : '🧪 Show Demo Results';
+                    newToggleBtn.style.background = window.demoMode.showingDemoResults ? '#ef4444' : '#10b981'; // Red for demo showing, green for real showing
+                    newToggleBtn.style.minWidth = '180px'; // Consistent width
+                    
+                    newToggleBtn.addEventListener('click', function() {
+                        console.log('🔄 Demo toggle button clicked, current state:', window.demoMode.showingDemoResults);
+                        
+                        if (window.demoMode.showingDemoResults) {
                             // Show real results (if any) or empty state
                             console.log('📊 Showing real results');
+                            
+                            // Restore original user ID function if it was overridden
+                            if (window.assessmentStateManager && window.assessmentStateManager._originalGetCurrentUserId) {
+                                window.assessmentStateManager.getCurrentUserId = window.assessmentStateManager._originalGetCurrentUserId;
+                            }
+                            
                             if (typeof loadAssessmentResults === 'function') {
                                 loadAssessmentResults();
                             }
-                            toggleBtn.textContent = '🧪 Show Demo Results';
+                            newToggleBtn.textContent = '🧪 Show Demo Results';
+                            newToggleBtn.style.background = '#10b981'; // Green for real results showing
+                            window.demoMode.showingDemoResults = false;
                         } else {
                             // Show demo results
                             console.log('🧪 Showing demo results');
@@ -3202,17 +3269,42 @@
                                         'CB-02': 4, 'CB-03': 5, 'CB-04': 5, 'CB-05': 4, 'CB-06': 4,
                                         'CB-07': 5, 'UP-01': 5, 'UP-02': 4, 'UP-03': 4, 'UP-04': 5
                                     },
-                                    isTestData: true
+                                    isTestData: true,
+                                    currentScenario: 'general'
                                 };
+                                
+                                // Store demo results in localStorage so context filter can work
+                                const demoUserId = 'demo-user';
+                                const localStorageKey = `assessment_results_${demoUserId}`;
+                                localStorage.setItem(localStorageKey, JSON.stringify(demoResults));
+                                
+                                // Temporarily set the current user ID for demo mode
+                                if (window.assessmentStateManager) {
+                                    // Store original function if not already stored
+                                    if (!window.assessmentStateManager._originalGetCurrentUserId) {
+                                        window.assessmentStateManager._originalGetCurrentUserId = window.assessmentStateManager.getCurrentUserId;
+                                    }
+                                    window.assessmentStateManager.getCurrentUserId = function() {
+                                        return demoUserId;
+                                    };
+                                }
+                                
                                 renderDashboardResultsUI(demoResults);
                             }
-                            toggleBtn.textContent = 'Show Real Results';
+                            newToggleBtn.textContent = 'Show Real Results';
+                            newToggleBtn.style.background = '#ef4444'; // Red for demo
+                            window.demoMode.showingDemoResults = true;
                         }
-                        showingDemoResults = !showingDemoResults;
+                        
+                        console.log('🔄 Demo mode state updated:', window.demoMode.showingDemoResults);
                     });
+                    
+                    console.log('✅ Demo toggle button event listener attached');
+                } else {
+                    console.log('❌ Demo toggle button not found in DOM');
                 }
             } else {
-                console.log('❌ Demo actions not shown - user is not a demo user or element not found');
+                console.log('❌ Demo actions not found in DOM');
             }
         }
         
