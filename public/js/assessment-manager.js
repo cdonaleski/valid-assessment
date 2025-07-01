@@ -23,10 +23,6 @@ function isUserLoggedIn() {
     return false;
 }
 
-function isDemoUser() {
-    return !!localStorage.getItem('demoUser');
-}
-
 // Helper: Check if user is a team admin
 function isTeamAdmin(user) {
     return user && user.team_role === 'admin';
@@ -130,7 +126,6 @@ class AssessmentManager {
             hasAnswers: !!state?.answers,
             answersCount: state?.answers ? Object.keys(state.answers).length : 0,
             isLoggedIn: isUserLoggedIn(),
-            isDemoUser: isDemoUser()
         });
         
         if (!isUserLoggedIn()) {

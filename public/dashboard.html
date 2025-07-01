@@ -3015,17 +3015,6 @@
         });
 
         // --- DEMO USER LOGIC FOR MY RESULTS SECTION ---
-        function isDemoUser() {
-            try {
-                const demoUser = localStorage.getItem('demoUser');
-                if (demoUser) {
-                    const user = JSON.parse(demoUser);
-                    return !!user.email;
-                }
-            } catch (e) {}
-            return false;
-        }
-
         function hasCompletedAssessment() {
             // This should check if real results exist for the user
             if (window.assessmentStateManager && typeof window.assessmentStateManager.hasCompletedAssessments === 'function') {
