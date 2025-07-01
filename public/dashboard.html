@@ -481,7 +481,7 @@
                     <!-- My Results Section -->
                     <div id="dashboardResultsSection" class="dashboard-section" style="display: none;">
                         <div class="actions-section" style="margin-bottom: 2rem; justify-content: flex-end;">
-                            <div id="demoActions" style="display: none; align-items: center; gap: 1rem;">
+                            <div id="demoActions" style="display: flex; align-items: center; gap: 1rem;">
                                 <button class="btn primary" id="toggleDemoResultsBtn" style="background: #ef4444;">
                                     🧪 Show Demo Results
                                 </button>
@@ -3037,13 +3037,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             const demoActions = document.getElementById('demoActions');
             const toggleBtn = document.getElementById('toggleDemoResultsBtn');
-            if (isDemoUser() && demoActions && toggleBtn) {
+            if (demoActions && toggleBtn) {
                 demoActions.style.display = 'flex';
                 let showingDemoResults = false;
                 toggleBtn.addEventListener('click', function() {
                     if (showingDemoResults) {
                         // Show real results (if any)
-                        if (hasCompletedAssessment()) {
+                        if (typeof hasCompletedAssessment === 'function' && hasCompletedAssessment()) {
                             if (typeof loadAssessmentResults === 'function') {
                                 loadAssessmentResults();
                             }
