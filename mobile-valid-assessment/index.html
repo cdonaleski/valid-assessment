@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment - Mobile</title>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.2/css/all.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Supabase JavaScript Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+    
+    <!-- Environment Variables (Replace with your actual values) -->
+    <script>
+        // Global configuration - loaded securely from server
+        window.APP_CONFIG = null;
+        
+        // Load configuration from secure server endpoint
+        async function loadConfiguration() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`Configuration fetch failed: ${response.status}`);
+                }
+                const config = await response.json();
+                
+                // Set global configuration
+                window.SUPABASE_URL = config.supabaseUrl;
+                window.SUPABASE_ANON_KEY = config.supabaseAnonKey;
+                window.WEBHOOK_BASE_URL = config.webhookBaseUrl;
+                window.APP_CONFIG = config;
+                
+                console.log('🔒 Configuration loaded securely from server');
+                return config;
+            } catch (error) {
+                console.error('❌ Failed to load configuration:', error);
+                throw error;
+            }
+        }
+    </script>
+    
+    <style>
+        /* Mobile Assessment Styles - All CSS embedded for standalone deployment */
+        
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e5e7eb;
+            height: 70px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            max-width: 100%;
+            height: 100%;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            flex-shrink: 1;
+        }
+
+        .header-logo-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1;
+        }
+
+        .logo-main {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f2937;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-sub {
+            font-size: 10px;
+            font-weight: 500;
+            color: #6b7280;
+            letter-spacing: 0.25px;
+            margin-top: -2px;
+        }
+
+        .progress-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .step-counter {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            white-space: nowrap;
+        }
+
+        .progress-bar {
+            width: 80px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 1rem;
+            min-height: calc(100vh - 70px);
+            margin-top: 70px;
+            padding-top: 1rem;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Age Selection Styles */
+        .age-content {
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .age-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .age-description {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        .age-question h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+
+        .age-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .age-option {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .age-option:hover {
+            border-color: #6366f1;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        .age-option.selected {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .age-text {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Question Styles */
+        .question-content {
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .question-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .question-instructions {
+            color: #6b7280;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+        }
+
+        .answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Horizontal layout for Likert scale questions */
+        .answer-options.horizontal {
+            position: fixed;
+            bottom: 80px;
+            left: 16px;
+            right: 16px;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 8px;
+            background: white;
+            padding: 16px;
+            border-radius: 20px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .answer-option {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+        }
+
+        .answer-options.horizontal .answer-option {
+            flex: 1;
+            padding: 12px 8px;
+            border-radius: 12px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .answer-option:hover {
+            border-color: #6366f1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        .answer-option.selected {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .answer-option input[type="radio"] {
+            display: none;
+        }
+
+        .answer-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+
+        .answer-options.horizontal .answer-text {
+            font-size: 0.75rem;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .answer-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        /* Contact Form Styles */
+        .contact-content {
+            padding: 2rem 0;
+        }
+
+        .contact-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Results Styles */
+        .results-content {
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .radar-chart-container {
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        #radarChart {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .disclaimer {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        /* Research & Involvement Styles */
+        .research-section, .involvement-section {
+            padding: 3rem 1rem;
+            background: white;
+            margin: 2rem 0;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .section-description {
+            font-size: 1rem;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .involvement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .involvement-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .involvement-card:hover {
+            border-color: #6366f1;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+        }
+
+        .involvement-card-icon {
+            font-size: 2rem;
+            color: #6366f1;
+            margin-bottom: 1rem;
+        }
+
+        .involvement-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .involvement-card-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        /* Navigation */
+        .navigation {
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-btn.primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .nav-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 640px) {
+            .header-content {
+                padding: 0.75rem;
+            }
+
+            .logo-main {
+                font-size: 12px;
+            }
+
+            .logo-sub {
+                font-size: 9px;
+            }
+
+            .progress-bar {
+                width: 60px;
+            }
+
+            .involvement-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .answer-options.horizontal {
+                bottom: 60px;
+                left: 8px;
+                right: 8px;
+                padding: 12px;
+            }
+
+            .answer-options.horizontal .answer-option {
+                min-height: 70px;
+                padding: 8px 4px;
+            }
+
+            .answer-icon {
+                font-size: 1.25rem;
+            }
+
+            .answer-options.horizontal .answer-text {
+                font-size: 0.6875rem;
+            }
+        }
+
+        /* Loading and Success States */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f4f6;
+            border-radius: 50%;
+            border-top-color: #6366f1;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            background: #ecfdf5;
+            border: 1px solid #10b981;
+            color: #047857;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        /* Dimension Breakdown */
+        .dimension-breakdown {
+            margin: 20px 0;
+        }
+
+        .dimension-breakdown h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
+
+        .dimension-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .dimension-card {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dimension-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .dimension-info {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dimension-name {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .dimension-score {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #1f2937;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            margin: 20px 0;
+        }
+
+        .recommendations h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
+
+        .recommendation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .recommendation-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .recommendation-text {
+            flex: 1;
+            font-size: 0.95rem;
+            color: #374151;
+            line-height: 1.4;
+        }
+
+        /* Results Actions */
+        .results-actions {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Research Section */
+        .research-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f6f9fc 0%, #eef2f7 100%);
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .research-header {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .research-intro {
+            color: #6b7280;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .research-cta-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .research-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Involvement Section */
+        .involvement-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 16px;
+        }
+
+        .involvement-header {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .involvement-subheading {
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .involvement-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .involvement-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .involvement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .card-description {
+            color: #6b7280;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .card-cta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-cta:hover {
+            opacity: 0.9;
+        }
+
+        .involvement-note {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-container">
+                <div class="header-logo-text">
+                    <span class="logo-main">THE VALIDATED MIND</span>
+                    <span class="logo-sub">RESEARCH LAB</span>
+                </div>
+            </div>
+            <div class="progress-info">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Age Selection Screen -->
+        <div id="ageScreen" class="screen active">
+            <div class="age-content">
+                <h1 class="age-title">Welcome to VALID Assessment</h1>
+                <p class="age-description">Let's start with some basic information</p>
+                
+                <div class="age-question">
+                    <h3>What's your age group?</h3>
+                    <div class="age-options">
+                        <div class="age-option" data-age="18-24">
+                            <span class="age-text">18-24</span>
+                        </div>
+                        <div class="age-option" data-age="25-34">
+                            <span class="age-text">25-34</span>
+                        </div>
+                        <div class="age-option" data-age="35-44">
+                            <span class="age-text">35-44</span>
+                        </div>
+                        <div class="age-option" data-age="45-54">
+                            <span class="age-text">45-54</span>
+                        </div>
+                        <div class="age-option" data-age="55-64">
+                            <span class="age-text">55-64</span>
+                        </div>
+                        <div class="age-option" data-age="65+">
+                            <span class="age-text">65+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Role Screen -->
+        <div id="jobTitleScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">What's your role level?</h1>
+                <p class="age-description">Select the option that best describes your position</p>
+                
+                <div class="job-role-selection">
+                    <div class="age-options">
+                        <div class="age-option" data-role="individual">
+                            <span class="age-text">Individual Contributor</span>
+                        </div>
+                        <div class="age-option" data-role="team-lead">
+                            <span class="age-text">Team Lead</span>
+                        </div>
+                        <div class="age-option" data-role="manager">
+                            <span class="age-text">Manager</span>
+                        </div>
+                        <div class="age-option" data-role="director">
+                            <span class="age-text">Director</span>
+                        </div>
+                        <div class="age-option" data-role="vp-c-suite">
+                            <span class="age-text">VP/C-Suite</span>
+                        </div>
+                        <div class="age-option" data-role="owner-founder">
+                            <span class="age-text">Owner/Founder</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decision Maker Screen -->
+        <div id="decisionMakerScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">Decision Making Role</h1>
+                <p class="age-description">Are you a decision maker in your role?</p>
+                
+                <div class="age-question">
+                    <div class="age-options">
+                        <div class="age-option" data-decision="yes">
+                            <span class="age-text">Yes, I make key decisions</span>
+                        </div>
+                        <div class="age-option" data-decision="somewhat">
+                            <span class="age-text">Somewhat, I influence decisions</span>
+                        </div>
+                        <div class="age-option" data-decision="no">
+                            <span class="age-text">No, I follow decisions made by others</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informational Screen -->
+        <div id="infoScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">About VALID Assessment</h1>
+                <p class="age-description">Discover your decision-making style through our research-backed framework</p>
+                
+                <div style="margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+                    <h3 style="color: #1f2937; margin-bottom: 1rem;">What you'll discover:</h3>
+                    <ul style="text-align: left; color: #6b7280; line-height: 1.8; list-style: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;">✨ Your unique decision-making profile</li>
+                        <li style="margin-bottom: 0.5rem;">🎯 Personalized insights and recommendations</li>
+                        <li style="margin-bottom: 0.5rem;">📊 Visual representation of your style</li>
+                        <li style="margin-bottom: 0.5rem;">🚀 Opportunities for growth and development</li>
+                    </ul>
+                </div>
+                
+                <button id="infoContinueBtn" class="submit-btn" style="margin-top: 2rem;">
+                    Continue to Assessment
+                </button>
+            </div>
+        </div>
+
+        <!-- Consultant Screen -->
+        <div id="consultantScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">How did you hear about us?</h1>
+                <p class="age-description">This helps us understand our reach and impact</p>
+                
+                <div class="age-options">
+                    <div class="age-option" data-consultant="consultant">
+                        <span class="age-text">Consultant</span>
+                    </div>
+                    <div class="age-option" data-consultant="colleague">
+                        <span class="age-text">Colleague or Friend</span>
+                    </div>
+                    <div class="age-option" data-consultant="social">
+                        <span class="age-text">Social Media</span>
+                    </div>
+                    <div class="age-option" data-consultant="search">
+                        <span class="age-text">Search Engine</span>
+                    </div>
+                    <div class="age-option" data-consultant="event">
+                        <span class="age-text">Event or Conference</span>
+                    </div>
+                    <div class="age-option" data-consultant="other">
+                        <span class="age-text">Other</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">Ready to Begin?</h1>
+                <p class="age-description">The assessment takes about 5-7 minutes to complete</p>
+                
+                <div style="margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+                    <h3 style="color: #1f2937; margin-bottom: 1rem;">Instructions:</h3>
+                    <ul style="text-align: left; color: #6b7280; line-height: 1.8; list-style: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;">📝 Answer questions honestly for accurate results</li>
+                        <li style="margin-bottom: 0.5rem;">⏱️ Go with your first instinct - don't overthink</li>
+                        <li style="margin-bottom: 0.5rem;">📱 Questions will auto-advance after selection</li>
+                        <li style="margin-bottom: 0.5rem;">↩️ You can go back to previous questions anytime</li>
+                    </ul>
+                </div>
+                
+                <button id="startAssessmentBtn" class="submit-btn" style="margin-top: 2rem;">
+                    Begin Assessment
+                </button>
+            </div>
+        </div>
+
+        <!-- Question Screens Container -->
+        <div id="questionScreens" class="screen">
+            <div class="question-content">
+                <h2 id="questionTitle" class="question-title"></h2>
+                <p class="question-instructions">Select the option that best describes you</p>
+                <div id="answerOptions" class="answer-options"></div>
+            </div>
+        </div>
+
+        <!-- Contact Screen -->
+        <div id="contactScreen" class="screen">
+            <div class="contact-content">
+                <h1 class="age-title">Almost Done!</h1>
+                <p class="age-description">Just a few details to personalize your results</p>
+                
+                <form id="contactForm" class="contact-form">
+                    <div class="form-group">
+                        <label for="firstName" class="form-label">First Name *</label>
+                        <input type="text" id="firstName" name="firstName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lastName" class="form-label">Last Name *</label>
+                        <input type="text" id="lastName" name="lastName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="organization" class="form-label">Organization</label>
+                        <input type="text" id="organization" name="organization" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" class="form-input">
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">
+                        View My Results
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen">
+            <div class="results-content">
+                <div class="results-header">
+                    <h2 class="results-title">Complete/Results</h2>
+                    <div class="results-progress">
+                        <div class="progress-bar-complete"></div>
+                    </div>
+                </div>
+                
+                <!-- Radar Chart -->
+                <div class="chart-container">
+                    <canvas id="radarChart" width="300" height="300"></canvas>
+                </div>
+                
+                <!-- Profile Summary -->
+                <div class="profile-summary" id="profileSummary">
+                    <h3>Your Decision-Making Profile</h3>
+                    <p>You have a foundation for good decision-making but may benefit from strengthening specific validation approaches. Consider developing areas where you scored lower.</p>
+                </div>
+                
+                <!-- VALID Dimensions Breakdown -->
+                <div class="dimension-breakdown">
+                    <h3>Your Dimensions</h3>
+                    <div class="dimension-cards" id="dimensionCards">
+                        <!-- Dimension cards will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Recommendations -->
+                <div class="recommendations">
+                    <h3>Recommended Actions</h3>
+                    <div class="recommendation-list" id="recommendationList">
+                        <!-- Recommendations will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Disclaimer -->
+                <div class="disclaimer">
+                    <p><em>Scores are for illustration purposes only.</em></p>
+                </div>
+                
+                <!-- Results Actions -->
+                <div class="results-actions">
+                    <button class="action-btn primary" id="takeAgainBtn">
+                        <i class="fas fa-redo"></i>
+                        Take Again
+                    </button>
+                </div>
+
+                <!-- Research Behind VALID Section -->
+                <div class="research-section">
+                    <h2 class="research-header">See the Research Behind VALID</h2>
+                    <p class="research-intro">
+                        Your assessment results are just the start. Discover the research behind the VALID Framework and how it's helping individuals and organizations make smarter, more validated decisions.
+                    </p>
+                    <button class="research-cta-btn" id="seeResearchBtn">
+                        See the Research Behind VALID <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- How Do You Want to Be Involved Section -->
+                <div class="involvement-section" id="involvementSection">
+                    <h2 class="involvement-header">How Do You Want to Be Involved?</h2>
+                    <p class="involvement-subheading">
+                        Thanks for exploring your VALID Profile. We're building something much bigger—and we'd love for you to be a part of it.
+                    </p>
+                    
+                    <div class="involvement-cards">
+                        <div class="involvement-card" data-type="consultant">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <h3 class="card-title">I'm Interested in Using This as a Consultant</h3>
+                            </div>
+                            <p class="card-description">
+                                Help clients build decision-mature teams using the VALID Framework.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Apply for Consultant Access
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="pilot">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <h3 class="card-title">I Want to Join the Pilot Program</h3>
+                            </div>
+                            <p class="card-description">
+                                Be part of an early group shaping how VALID is used in real-world settings.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Join the Pilot
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="research">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-flask"></i>
+                                </div>
+                                <h3 class="card-title">I Want to Participate in Research</h3>
+                            </div>
+                            <p class="card-description">
+                                Contribute to studies that advance our understanding of decision-making.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Join Research
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="updates">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <h3 class="card-title">I Want to Stay Updated</h3>
+                            </div>
+                            <p class="card-description">
+                                Get the latest insights and updates on decision-making research.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Get Updates
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="founder">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <h3 class="card-title">I'd Like to Talk to the Founder</h3>
+                            </div>
+                            <p class="card-description">
+                                Got something specific in mind? Let's connect directly.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Book a Call with Christopher
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="involvement-note">
+                        Your interest helps shape the future of how we understand and improve human decision-making.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button id="backBtn" class="nav-btn" style="display: none;">
+            <i class="fas fa-arrow-left"></i>
+            Back
+        </button>
+        <div style="flex: 1;"></div>
+        <button id="nextBtn" class="nav-btn primary" style="display: none;">
+            Next
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Ensure all wheel events are passive for better performance
+        (function() {
+            const addPassiveWheelListener = function() {
+                const originalAddEventListener = EventTarget.prototype.addEventListener;
+                EventTarget.prototype.addEventListener = function(type, listener, options) {
+                    if (type === 'wheel' || type === 'mousewheel' || type === 'DOMMouseScroll') {
+                        if (typeof options === 'boolean') {
+                            options = { capture: options, passive: true };
+                        } else if (typeof options === 'object' && options !== null) {
+                            options.passive = true;
+                        } else {
+                            options = { passive: true };
+                        }
+                    }
+                    return originalAddEventListener.call(this, type, listener, options);
+                };
+            };
+            
+            // Apply the passive wheel listener enhancement
+            addPassiveWheelListener();
+        })();
+    </script>
+    
+    <script src="js/mobile-supabase.js"></script>
+    <script src="js/mobile-assessment.js"></script>
+</body>
+</html> 

@@ -1,0 +1,52 @@
+{
+  "name": "mobile-valid-assessment",
+  "version": "1.0.0",
+  "description": "Standalone mobile VALID assessment with Supabase integration and webhook automation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build step required for standalone version'",
+    "deploy": "npm run supabase:deploy && npm start",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:deploy": "supabase db push",
+    "supabase:reset": "supabase db reset",
+    "test": "echo 'Tests not implemented yet'"
+  },
+  "keywords": [
+    "assessment",
+    "mobile",
+    "valid",
+    "decision-making",
+    "supabase",
+    "webhook",
+    "automation"
+  ],
+  "author": "The Validated Mind Research Lab",
+  "license": "MIT",
+  "dependencies": {
+    "@hubspot/api-client": "^11.1.0",
+    "@sendgrid/mail": "^7.7.0",
+    "@supabase/supabase-js": "^2.39.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/mobile-valid-assessment.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/mobile-valid-assessment/issues"
+  },
+  "homepage": "https://github.com/your-username/mobile-valid-assessment#readme"
+}
