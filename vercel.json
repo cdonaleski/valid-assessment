@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "name": "mobile-valid-assessment",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server.js": {
+      "maxDuration": 10
+    }
+  }
+} 
