@@ -1,9 +1,14 @@
 {
   "version": 2,
+  "public": true,
   "rewrites": [
     {
-      "source": "/mobile/(.*)",
+      "source": "/mobile",
       "destination": "/mobile-valid-assessment/index.html"
+    },
+    {
+      "source": "/mobile/(.*)",
+      "destination": "/mobile-valid-assessment/$1"
     }
   ]
 } 
