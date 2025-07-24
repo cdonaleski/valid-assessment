@@ -91,6 +91,13 @@
             flex-shrink: 1;
         }
 
+        .header-logo-img {
+            height: 45px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
         .header-logo-text {
             display: flex;
             flex-direction: column;
@@ -530,6 +537,11 @@
                 padding: 0.75rem;
             }
 
+            .header-logo-img {
+                height: 35px;
+                max-width: 150px;
+            }
+
             .logo-main {
                 font-size: 12px;
             }
@@ -879,10 +891,7 @@
     <header class="header">
         <div class="header-content">
             <div class="logo-container">
-                <div class="header-logo-text">
-                    <span class="logo-main">THE VALIDATED MIND</span>
-                    <span class="logo-sub">RESEARCH LAB</span>
-                </div>
+                <img src="logo.png" alt="The Validated Mind Research Lab" class="header-logo-img">
             </div>
             <div class="progress-info">
                 <div class="progress-bar">
