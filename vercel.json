@@ -1,39 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "public/**/*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/js/**/*.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/css/**/*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/img/**/*",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/images/**/*",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "simple-server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "mobile-valid-assessment/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "mobile-valid-assessment/index.html",
-      "use": "@vercel/static"
-    }
-  ],
   "routes": [
     {
       "src": "/mobile-valid-assessment/api/(.*)",
@@ -102,6 +68,9 @@
   ],
   "functions": {
     "mobile-valid-assessment/server.js": {
+      "maxDuration": 10
+    },
+    "simple-server.js": {
       "maxDuration": 10
     }
   }
