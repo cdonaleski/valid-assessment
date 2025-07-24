@@ -1,6 +1,9 @@
 {
   "version": 2,
   "name": "mobile-valid-assessment",
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/(.*)",
