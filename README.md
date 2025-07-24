@@ -1,130 +1,136 @@
-# VALID Assessment Platform
+# 🎯 VALID Assessment Framework
 
-A web-based assessment platform for evaluating decision-making styles and providing personalized feedback. Built with Node.js, Express, and Supabase, it offers interactive assessments, real-time scoring, and robust reporting features.
+A comprehensive decision-making assessment tool built for modern organizations.
 
----
+## 🚀 **Quick Start**
 
-## Features
-
-- **Interactive Assessment Interface**: User-friendly, step-by-step assessment flow.
-- **Real-Time Scoring & Analysis**: Instant feedback and persona calculation.
-- **PDF Report Generation**: Downloadable, professional reports.
-- **Offline Support**: Local storage for in-progress assessments.
-- **Secure Data Handling**: Supabase integration for secure storage.
-- **Dev Mode**: Toggleable debug panel and test data generation for developers.
-
----
-
-## Directory Structure
-
-```
-valid-assessment/
-├── css/                # Stylesheets (main, components, debug, layout, etc.)
-├── img/                # Image assets
-├── js/                 # JavaScript source files
-│   ├── assessment-controller.js   # Main assessment logic and UI control
-│   ├── scoring.js                # Scoring and persona calculation
-│   ├── reports.js                # PDF report generation
-│   ├── logger.js                 # Debug panel and logging
-│   ├── supabase-client.js        # Supabase integration
-│   ├── ...                       # Other modules (state, utils, etc.)
-├── supabase/           # Supabase config and migrations
-│   ├── migrations/              # SQL migration scripts
-│   └── config.toml              # Supabase project config
-├── index.html          # Main assessment page
-├── results.html        # Results/report page
-├── admin.html          # Admin dashboard
-├── dev-server.js       # Development server (with live reload)
-├── simple-server.js    # Simple static server
-├── package.json        # Project metadata and scripts
-├── vercel.json         # Vercel deployment config
-└── README.md           # Project documentation
-```
-
----
-
-## Setup & Usage
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/cdonaleski/valid-assessment.git
 cd valid-assessment
-```
-
-### 2. Install dependencies
-```bash
 npm install
-```
-
-### 3. Configure environment variables
-Create a `.env` file:
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-VALID_ENV=development
-```
-
-### 4. Start the development server
-```bash
 npm run dev
 ```
-Visit [http://localhost:8000](http://localhost:8000) in your browser.
+
+Visit `http://localhost:8000` to access the assessment.
+
+## 📱 **Mobile Assessment Module**
+
+### **Standalone Mobile Assessment**
+Location: `mobile-valid-assessment/`
+
+A secure, standalone mobile assessment optimized for deployment:
+
+```bash
+cd mobile-valid-assessment
+npm install
+npm start
+```
+
+Visit `http://localhost:3000` for the mobile assessment.
+
+#### **Features:**
+- ✅ **Enterprise security** - Environment variables, CSP protection
+- ✅ **Separate database tables** - No conflicts with main assessment
+- ✅ **Webhook automation** - User involvement tracking
+- ✅ **Performance optimized** - Passive event listeners, mobile-first
+- ✅ **Vercel-ready** - Complete deployment configuration
+
+#### **Quick Deploy to Vercel:**
+1. **Configure environment variables** in Vercel dashboard:
+   ```bash
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   NODE_ENV=production
+   WEBHOOK_BASE_URL=https://your-app.vercel.app
+   ```
+2. **Deploy from GitHub** - Vercel auto-detects the configuration
+3. **Run database migration** - Execute SQL from `mobile-valid-assessment/supabase/migrations/`
+
+#### **Documentation:**
+- 📖 **[Mobile README](mobile-valid-assessment/README.md)** - Complete guide
+- 🚀 **[Deployment Guide](mobile-valid-assessment/DEPLOYMENT.md)** - Vercel setup
+- 🔒 **[Security Guide](mobile-valid-assessment/SECURITY.md)** - Best practices
+- 🔌 **[Webhook Guide](mobile-valid-assessment/WEBHOOKS.md)** - Automation setup
 
 ---
 
-## Deployment
+## 🎯 **Main Assessment Features**
 
-### Vercel
-- Install Vercel CLI: `npm i -g vercel`
-- Deploy: `vercel`
-- Set environment variables in the Vercel dashboard:
-  - `SUPABASE_URL`
-  - `SUPABASE_ANON_KEY`
-  - `VALID_ENV=production`
+### **Core Assessment**
+- 25 research-backed questions across 5 VALID dimensions
+- Real-time scoring and validation
+- Comprehensive results with radar charts
+- Personalized recommendations
 
-### Supabase
-- Create a project at [supabase.com](https://supabase.com/)
-- Run the SQL scripts in `supabase/migrations/` to set up your database schema
-- Copy your Supabase URL and anon key to your `.env` and Vercel settings
+### **Enterprise Features**
+- Team management and bulk assessments
+- Advanced analytics and reporting
+- Change readiness evaluation
+- Predictive insights dashboard
 
-### GitHub
-- Push your code to a GitHub repository
-- Connect your repo to Vercel for automatic deployments
+### **Technical Stack**
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Backend**: Node.js, Express
+- **Database**: Supabase (PostgreSQL)
+- **Deployment**: Vercel
+- **Security**: Environment variables, CSP, RLS
+
+## 📊 **Project Structure**
+
+```
+valid-assessment/
+├── mobile-valid-assessment/    # 📱 Standalone mobile module
+│   ├── index.html             # Mobile assessment app
+│   ├── server.js              # Express server
+│   ├── vercel.json            # Deployment config
+│   └── DEPLOYMENT.md          # Setup guide
+├── public/                    # 🖥️ Main assessment
+│   ├── index.html             # Desktop assessment
+│   ├── dashboard.html         # Analytics dashboard
+│   └── js/                    # Core JavaScript
+├── api/                       # 🔧 Backend APIs
+├── supabase/                  # 🗄️ Database migrations
+└── docs/                      # 📚 Documentation
+```
+
+## 🔒 **Security**
+
+Both main and mobile assessments implement enterprise-grade security:
+- **Environment variable protection**
+- **Content Security Policy (CSP)**
+- **Row Level Security (RLS) in database**
+- **API key protection**
+- **HTTPS enforcement**
+
+## 🚀 **Deployment Options**
+
+### **Main Assessment (Vercel)**
+```bash
+vercel --prod
+```
+
+### **Mobile Assessment (Vercel)**
+```bash
+cd mobile-valid-assessment
+vercel --prod
+```
+
+### **Both Simultaneously**
+Deploy the entire repository - both assessments available at different routes.
+
+## 📞 **Support**
+
+- **Issues**: [GitHub Issues](https://github.com/cdonaleski/valid-assessment/issues)
+- **Mobile Assessment**: See `mobile-valid-assessment/README.md`
+- **Security**: See `mobile-valid-assessment/SECURITY.md`
 
 ---
 
-## Developer Guide
+## 🎯 **Quick Links**
 
-- **Dev Mode**: Use the toggle switch at the bottom left of the results page to enable the debug panel and test data generation.
-- **Testing**: (Coming soon) Unit and integration tests will be in `js/__tests__/`.
-- **Contributing**: Fork the repo, create a feature branch, submit a pull request.
-- **Scripts**:
-  - `npm run dev` – Start dev server
-  - `npm start` – Start simple server
-  - `npm run build` – (No build step required)
+- 🖥️ **Main Assessment**: `/public/index.html`
+- 📱 **Mobile Assessment**: `/mobile-valid-assessment/index.html`
+- 📊 **Dashboard**: `/public/dashboard.html`
+- 🔧 **API Docs**: `/api/README.md`
 
----
-
-## API & Integration
-
-- **Supabase**: Used for authentication, data storage, and retrieval.
-- **Endpoints**: (If you add custom endpoints, document them here.)
-- **Environment Variables**:
-  - `SUPABASE_URL`: Your Supabase project URL
-  - `SUPABASE_ANON_KEY`: Your Supabase anon key
-  - `VALID_ENV`: `development` or `production`
-
----
-
-## Troubleshooting & FAQ
-
-- **Supabase errors**: Check your environment variables and Supabase project status.
-- **Port in use**: Change the `PORT` in your `.env` or stop other servers.
-- **Debug panel not visible**: Use the Dev Mode toggle switch.
-- **PDF not generating**: Ensure jsPDF is loaded and browser supports downloads.
-
----
-
-## License
-
-MIT
+**Ready to assess decision-making at scale!** 🚀
