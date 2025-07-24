@@ -1,252 +1,92 @@
-# 🎯 Mobile VALID Assessment - Standalone Application
+# 📱 **Mobile VALID Assessment - Standalone Production Module**
 
-A secure, standalone mobile assessment application for the VALID Framework, featuring enterprise-grade security practices and complete data separation.
+> **🚀 Enterprise-ready mobile assessment optimized for independent deployment**
 
-## 🔒 **Security First**
+## ✨ **What This Is**
 
-This application implements **best-practice security**:
-- ✅ **No hardcoded API keys** in client-side code
-- ✅ **Environment variables** for all sensitive configuration
-- ✅ **Content Security Policy** protection against XSS
-- ✅ **Separate database tables** with Row Level Security
-- ✅ **Server-side configuration** endpoint
+This is the **production-ready standalone mobile assessment** designed for secure, independent deployment. It's completely separate from the main assessment in `/public/` and includes enterprise-grade security features.
 
-## 🚀 **Quick Start**
+## 🎯 **Quick Start**
 
-### **1. Environment Setup**
+### **Local Development:**
 ```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your actual values
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-NODE_ENV=development
-PORT=3000
-```
-
-### **2. Install Dependencies**
-```bash
+cd mobile-valid-assessment
 npm install
-```
-
-### **3. Database Setup**
-1. Go to your [Supabase SQL Editor](https://app.supabase.com/project/your-project-id/sql)
-2. Run the migration script from `supabase/migrations/001_mobile_assessment_tables.sql`
-3. Verify tables are created: `mobile_assessments`, `mobile_user_involvement`, `mobile_assessment_sessions`
-
-### **4. Start Server**
-```bash
 npm start
-# or for development
-npm run dev
 ```
+Visit: http://localhost:3000
 
-### **5. Access Application**
-Open http://localhost:3000 in your browser
+### **Production Deployment (Vercel):**
+1. **Set environment variables** in Vercel dashboard
+2. **Deploy from GitHub** - auto-detects configuration
+3. **Ready to use!**
 
-## 📊 **Features**
+## 🔒 **Security Features**
 
-### **Assessment Flow**
-- Age selection
-- Job role selection  
-- Decision maker identification
-- VALID assessment questions (25 questions)
-- Comprehensive results with radar chart
-- Personalized recommendations
+- ✅ **Environment Variables** - No hardcoded API keys
+- ✅ **Server-side Config** - Secure `/api/config` endpoint
+- ✅ **Content Security Policy** - XSS protection
+- ✅ **Separate Database** - No conflicts with main assessment
 
-### **Security Features**
-- Server-side configuration loading
-- Content Security Policy protection
-- Environment variable protection
-- Secure API key management
+## 📊 **Database Structure**
 
-### **Database Integration**
-- Separate mobile assessment tables
-- Real-time answer saving
-- Contact information capture
-- Involvement preference tracking
-- Session analytics
+**Separate tables for mobile assessments:**
+- `mobile_assessments` - Assessment sessions
+- `mobile_assessment_answers` - Individual responses
+- `mobile_assessment_analytics` - Usage analytics
 
-### **Webhook System**
-- Automated involvement tracking
-- External service integration ready
-- Consultant application processing
-- Research participation management
-
-## 🗄️ **Database Schema**
-
-### **Mobile Tables (Separate from Main Assessment)**
-```sql
-mobile_assessments          -- Core assessment data
-mobile_user_involvement     -- Webhook/involvement tracking  
-mobile_assessment_sessions  -- Session analytics
-mobile_assessment_analytics -- Reporting view
-```
-
-### **Data Separation**
-- ✅ **Independent tables** (no conflicts with main assessment)
-- ✅ **Separate reporting** and analytics
-- ✅ **Mobile-specific tracking** and webhooks
-
-## 🔌 **API Endpoints**
-
-### **Configuration** 
-- `GET /api/config` - Secure configuration loading
-
-### **Webhooks**
-- `POST /api/webhooks/involvement` - User involvement preferences
-
-## 🛡️ **Security Guide**
-
-See [SECURITY.md](./SECURITY.md) for comprehensive security documentation including:
-- Environment variable protection
-- Content Security Policy configuration  
-- API key management
-- Production deployment security
-- Security incident response
+**No conflicts** with main assessment data!
 
 ## 🚀 **Deployment**
 
-### **Environment Variables (Required)**
-```bash
+### **Environment Variables Required:**
+```env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
-NODE_ENV=production  
-PORT=3000
-WEBHOOK_BASE_URL=https://yourdomain.com
+NODE_ENV=production
+WEBHOOK_BASE_URL=https://your-app.vercel.app
 ```
 
-### **Platform-Specific Deployment**
+### **Vercel Configuration:**
+- ✅ `vercel.json` included and configured
+- ✅ Auto-detects Node.js build
+- ✅ Routes configured for API endpoints
 
-#### **Vercel**
-```bash
-vercel --env SUPABASE_URL=... --env SUPABASE_ANON_KEY=...
-```
+## 🔧 **Key Files**
 
-#### **Heroku**
-```bash
-heroku config:set SUPABASE_URL=... SUPABASE_ANON_KEY=...
-```
+- `index.html` - Mobile assessment app
+- `server.js` - Express server with security
+- `js/mobile-assessment.js` - Assessment logic
+- `js/mobile-supabase.js` - Database integration
+- `vercel.json` - Deployment configuration
 
-#### **Railway**
-```bash
-railway deploy
-# Set environment variables in Railway dashboard
-```
+## 📖 **Documentation**
 
-## 📁 **Project Structure**
+- 🚀 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+- 🔒 **[SECURITY.md](SECURITY.md)** - Security best practices  
+- 🔌 **[WEBHOOKS.md](WEBHOOKS.md)** - Automation setup
+- ⚙️ **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Development setup
 
-```
-mobile-valid-assessment/
-├── index.html              # Main application (self-contained)
-├── server.js               # Express server with security
-├── package.json            # Dependencies and scripts
-├── .env                    # Environment variables (create from .env.example)
-├── .env.example            # Environment template
-├── .gitignore              # Excludes .env and sensitive files
-├── README.md               # This file
-├── SECURITY.md             # Security documentation
-├── WEBHOOKS.md             # Webhook documentation
-├── js/
-│   ├── mobile-assessment.js    # Assessment logic
-│   └── mobile-supabase.js      # Database integration
-├── api/
-│   └── routes.js           # API routes and webhooks
-└── supabase/
-    └── migrations/
-        └── 001_mobile_assessment_tables.sql  # Database setup
-```
+## 🎯 **vs. Legacy Version**
 
-## 🔧 **Configuration**
+| Feature | **This Standalone** | Legacy (`/public/mobile-assessment.html`) |
+|---------|-------------------|------------------------------------------|
+| **Purpose** | 🚀 Production deployment | 🧪 Testing/development |
+| **Security** | ✅ Enterprise-grade | ⚠️ Basic |
+| **Database** | ✅ Separate tables | ⚠️ Shared with main |
+| **Dependencies** | ✅ Independent | ⚠️ Shared with main |
+| **Deployment** | ✅ Vercel-ready | ⚠️ Manual setup |
+| **Performance** | ✅ Optimized | ⚠️ Basic |
 
-### **Secure Configuration Loading**
-The application loads configuration securely from the server:
+## 🔗 **Quick Links**
 
-```javascript
-// Client-side configuration loading
-const config = await fetch('/api/config').then(r => r.json());
-// API keys are never hardcoded in HTML/JS files
-```
-
-### **Content Security Policy**
-Configured to allow only necessary external resources:
-- FontAwesome icons
-- Google Fonts  
-- Supabase API
-- No unsafe inline scripts in production
-
-## 🧪 **Testing**
-
-### **Local Testing**
-```bash
-# Start server
-npm start
-
-# Test configuration endpoint
-curl http://localhost:3000/api/config
-
-# Test application
-open http://localhost:3000
-```
-
-### **Security Testing**
-```bash
-# Check for exposed API keys
-grep -r "eyJ" . --exclude-dir=node_modules
-
-# Verify .env is ignored
-git check-ignore .env
-
-# Test CSP compliance
-# Check browser console for CSP violations
-```
-
-## 🆘 **Troubleshooting**
-
-### **Common Issues**
-
-#### **Configuration Not Loading**
-```bash
-# Check environment variables
-cat .env
-
-# Verify server is running
-curl http://localhost:3000/api/config
-
-# Check server logs
-npm start
-```
-
-#### **Database Connection Issues**
-```bash
-# Verify Supabase URL and key
-curl -H "apikey: YOUR_ANON_KEY" \
-     "https://your-project.supabase.co/rest/v1/mobile_assessments?select=count"
-```
-
-#### **CSP Violations**
-- Check browser console for blocked resources
-- Update CSP policy in `server.js` if needed
-- Ensure external resources are from allowed domains
-
-## 📞 **Support**
-
-- **Security Issues**: See [SECURITY.md](./SECURITY.md)
-- **Webhook Documentation**: See [WEBHOOKS.md](./WEBHOOKS.md)  
-- **Database Issues**: Check Supabase dashboard logs
-- **Deployment Help**: Check platform-specific documentation
+- 📱 **Mobile Assessment**: `index.html`
+- 🔧 **API Config**: `server.js`
+- 🗄️ **Database Migration**: `supabase/migrations/`
+- 🚀 **Deploy to Vercel**: [vercel.com](https://vercel.com)
 
 ---
 
-## 🎯 **Production Ready**
+**Ready for production deployment!** 🚀
 
-This application is designed for production deployment with:
-- 🔒 **Enterprise security practices**
-- 📊 **Comprehensive analytics** 
-- 🔌 **Webhook automation** ready
-- 🗄️ **Separate database** tables
-- 📱 **Mobile-optimized** interface
-- 🚀 **Easy deployment** on any platform
-
-**Ready to ship!** 🚢 
+This standalone module can be deployed independently or as part of the main repository. 
