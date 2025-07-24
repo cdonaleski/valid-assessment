@@ -1,77 +1,9 @@
 {
   "version": 2,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/mobile-valid-assessment/api/(.*)",
-      "dest": "mobile-valid-assessment/server.js"
-    },
-    {
-      "src": "/mobile-valid-assessment/(.*)",
-      "dest": "mobile-valid-assessment/server.js"
-    },
-    {
-      "src": "/mobile/?",
-      "dest": "mobile-valid-assessment/index.html"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "public/js/$1",
-      "headers": {
-        "Content-Type": "application/javascript; charset=utf-8"
-      }
-    },
-    {
-      "src": "/css/(.*)",
-      "dest": "public/css/$1",
-      "headers": {
-        "Content-Type": "text/css; charset=utf-8"
-      }
-    },
-    {
-      "src": "/img/(.*)",
-      "dest": "public/img/$1"
-    },
-    {
-      "src": "/images/(.*)",
-      "dest": "public/images/$1"
-    },
-    {
-      "src": "/(.*)",
-      "continue": true,
-      "headers": {
-        "X-Frame-Options": "DENY",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-        "Content-Security-Policy": "default-src 'self' https://*.supabase.co https://*.supabase.in; connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.emailjs.com wss://*.supabase.co wss://*.supabase.in; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.emailjs.com https://esm.sh https://*.esm.sh https://*.supabase.co https://*.supabase.in; script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.emailjs.com https://esm.sh https://*.esm.sh https://*.supabase.co https://*.supabase.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-ancestors 'none'; worker-src 'self' blob:;"
-      }
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "simple-server.js"
+      "source": "/mobile/(.*)",
+      "destination": "/mobile-valid-assessment/index.html"
     }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com"
-        }
-      ]
-    }
-  ],
-  "functions": {
-    "mobile-valid-assessment/server.js": {
-      "maxDuration": 10
-    },
-    "simple-server.js": {
-      "maxDuration": 10
-    }
-  }
+  ]
 } 
