@@ -2,32 +2,72 @@
   "version": 2,
   "builds": [
     {
-      "src": "*.html",
+      "src": "public/**/*.html",
       "use": "@vercel/static"
     },
     {
-      "src": "js/**/*.js",
+      "src": "public/js/**/*.js",
       "use": "@vercel/static"
     },
     {
-      "src": "css/**/*.css",
+      "src": "public/css/**/*.css",
       "use": "@vercel/static"
     },
     {
-      "src": "img/**/*",
+      "src": "public/img/**/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/images/**/*",
       "use": "@vercel/static"
     },
     {
       "src": "simple-server.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "mobile-valid-assessment/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "mobile-valid-assessment/index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/mobile-valid-assessment/api/(.*)",
+      "dest": "mobile-valid-assessment/server.js"
+    },
+    {
+      "src": "/mobile-valid-assessment/(.*)",
+      "dest": "mobile-valid-assessment/server.js"
+    },
+    {
+      "src": "/mobile/?",
+      "dest": "mobile-valid-assessment/index.html"
+    },
+    {
       "src": "/js/(.*)",
+      "dest": "public/js/$1",
       "headers": {
         "Content-Type": "application/javascript; charset=utf-8"
       }
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "public/css/$1",
+      "headers": {
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "src": "/img/(.*)",
+      "dest": "public/img/$1"
+    },
+    {
+      "src": "/images/(.*)",
+      "dest": "public/images/$1"
     },
     {
       "src": "/(.*)",
@@ -59,5 +99,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "mobile-valid-assessment/server.js": {
+      "maxDuration": 10
+    }
+  }
 } 
