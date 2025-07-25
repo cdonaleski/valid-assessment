@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<!--
+  LEGACY MOBILE ASSESSMENT (Test/Development Version)
+  
+  ⚠️  This is the legacy mobile assessment for testing/development
+  🚀  For production mobile deployment, use: /mobile-valid-assessment/
+  
+  Key Differences:
+  - This version: Integrated with main assessment, shares dependencies
+  - Standalone version: Independent, production-ready, secure deployment
+  
+  The standalone version at /mobile-valid-assessment/ includes:
+  ✅ Enterprise security with environment variables
+  ✅ Separate database tables (no conflicts)
+  ✅ Webhook automation for user involvement
+  ✅ Performance optimizations
+  ✅ Vercel deployment configuration
+  
+  Use this legacy version for:
+  - Local testing
+  - Development debugging
+  - Feature comparisons
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment - Mobile</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.2/css/all.css">
+    <link rel="stylesheet" href="css/mobile-assessment.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-container">
+                <div class="header-logo-text">
+                    <span class="logo-main">THE VALIDATED MIND</span>
+                    <span class="logo-sub">RESEARCH LAB</span>
+                </div>
+            </div>
+            <div class="progress-info">
+                <span class="step-counter">
+                    <span id="currentStep">1</span>/<span id="totalSteps">25</span>
+                </span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Age Selection Screen -->
+        <div id="ageScreen" class="screen active">
+            <div class="age-content">
+                <h1 class="age-title">Welcome to VALID Assessment</h1>
+                <p class="age-description">Let's start with some basic information</p>
+                
+                <div class="age-question">
+                    <h3>What's your age group?</h3>
+                    <div class="age-options">
+                        <div class="age-option" data-age="18-24">
+                            <span class="age-text">18-24</span>
+                        </div>
+                        <div class="age-option" data-age="25-34">
+                            <span class="age-text">25-34</span>
+                        </div>
+                        <div class="age-option" data-age="35-44">
+                            <span class="age-text">35-44</span>
+                        </div>
+                        <div class="age-option" data-age="45-54">
+                            <span class="age-text">45-54</span>
+                        </div>
+                        <div class="age-option" data-age="55-64">
+                            <span class="age-text">55-64</span>
+                        </div>
+                        <div class="age-option" data-age="65+">
+                            <span class="age-text">65+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Role Screen -->
+        <div id="jobTitleScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">What's your role level?</h1>
+                <p class="age-description">Select the option that best describes your position</p>
+                
+                <div class="job-role-selection">
+                    <div class="age-options">
+                        <div class="age-option" data-role="individual">
+                            <span class="age-text">Individual Contributor</span>
+                        </div>
+                        <div class="age-option" data-role="team-lead">
+                            <span class="age-text">Team Lead</span>
+                        </div>
+                        <div class="age-option" data-role="manager">
+                            <span class="age-text">Manager</span>
+                        </div>
+                        <div class="age-option" data-role="director">
+                            <span class="age-text">Director</span>
+                        </div>
+                        <div class="age-option" data-role="vp-c-suite">
+                            <span class="age-text">VP/C-Suite</span>
+                        </div>
+                        <div class="age-option" data-role="owner-founder">
+                            <span class="age-text">Owner/Founder</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decision Maker Screen -->
+        <div id="decisionMakerScreen" class="screen">
+            <div class="age-content">
+                <h1 class="age-title">Decision Making Role</h1>
+                <p class="age-description">Are you a decision maker in your role?</p>
+                
+                <div class="age-question">
+                    <div class="age-options">
+                        <div class="age-option" data-decision="yes">
+                            <span class="age-text">Yes, I make key decisions</span>
+                        </div>
+                        <div class="age-option" data-decision="somewhat">
+                            <span class="age-text">Somewhat, I influence decisions</span>
+                        </div>
+                        <div class="age-option" data-decision="no">
+                            <span class="age-text">No, I follow decisions made by others</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informational Screen -->
+        <div id="infoScreen" class="screen">
+            <div class="info-content">
+                <div class="info-illustration">
+                    <i class="fas fa-users"></i>
+                    <div class="info-badges">
+                        <div class="info-badge">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="info-badge">
+                            <i class="fas fa-thumbs-up"></i>
+                        </div>
+                        <div class="info-badge">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <h2 class="info-title">A growing number of consultants, coaches and HR professionals recommend us!</h2>
+                <p class="info-description">Trusted by experts, our decision framework and systems are making a difference every day. See how this works for you!</p>
+                
+                <div class="info-note">
+                    <p><strong>Note:</strong> This is not the full version.</p>
+                </div>
+                
+                <button class="info-continue-btn" id="infoContinueBtn">
+                    Continue <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Consultant Referral Screen -->
+        <div id="consultantScreen" class="screen">
+            <div class="consultant-content">
+                <h2 class="consultant-title">Did you hear about The Validated Mind from a consultant?</h2>
+                <p class="consultant-description">Almost 8% of our users find us through expert recommendations</p>
+                
+                <div class="consultant-options">
+                    <div class="consultant-option" data-consultant="yes">
+                        <span class="consultant-text">Yes</span>
+                    </div>
+                    <div class="consultant-option" data-consultant="no">
+                        <span class="consultant-text">No</span>
+                    </div>
+                    <div class="consultant-option" data-consultant="i-am-consultant">
+                        <span class="consultant-text">I'm a consultant</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen">
+            <div class="welcome-content">
+                <h1 class="welcome-title">VALID Assessment</h1>
+                <p class="welcome-description">Get a personalized decision-making profile based on your validation patterns</p>
+                <div class="quiz-info">
+                    <span class="quiz-duration">5 MINUTE QUIZ</span>
+                </div>
+                
+                <button class="start-assessment-btn" id="startAssessmentBtn">
+                    Begin Assessment <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Question Screens -->
+        <div id="questionScreens" class="screen">
+            <div class="question-container">
+                <h2 class="question-title" id="questionTitle"></h2>
+                <p class="question-instructions" id="questionInstructions">Select the option that best describes you</p>
+                
+                <div class="answer-options" id="answerOptions">
+                    <!-- Answer options will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Collection Screen -->
+        <div id="contactScreen" class="screen">
+            <div class="contact-content">
+                <div class="success-illustration">
+                    <i class="fas fa-trophy"></i>
+                    <div class="success-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                
+                <h2 class="contact-title">Get Your Complete Results</h2>
+                <p class="contact-description">Enter your details to receive your full VALID profile and personalized recommendations</p>
+                
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <input type="text" id="firstName" name="firstName" placeholder="First Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="lastName" name="lastName" placeholder="Last Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="email" name="email" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="tel" id="phone" name="phone" placeholder="Phone Number (optional)">
+                    </div>
+                    <div class="form-group">
+                        <select id="organization" name="organization">
+                            <option value="">Organization (optional)</option>
+                            <option value="individual">Individual</option>
+                            <option value="small-business">Small Business</option>
+                            <option value="enterprise">Enterprise</option>
+                            <option value="consulting">Consulting</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">
+                        Get My Results <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen">
+            <div class="results-content">
+                <h2 class="results-title">Your VALID Profile</h2>
+                
+                <div class="radar-chart-container">
+                    <canvas id="radarChart" width="300" height="300"></canvas>
+                </div>
+                
+                <div class="profile-summary" id="profileSummary">
+                    <!-- Profile summary will be populated here -->
+                </div>
+                
+                <div class="dimension-breakdown">
+                    <h3>Your Dimensions</h3>
+                    <div class="dimension-cards" id="dimensionCards">
+                        <!-- Dimension cards will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="recommendations">
+                    <h3>Recommended Actions</h3>
+                    <div class="recommendation-list" id="recommendationList">
+                        <!-- Recommendations will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="disclaimer">
+                    <p><em>Scores are for illustration purposes only.</em></p>
+                </div>
+                
+                <div class="results-actions">
+                    <button class="action-btn primary" id="takeAgainBtn">
+                        <i class="fas fa-redo"></i>
+                        Take Again
+                    </button>
+                </div>
+                
+                <!-- Research Behind VALID Section -->
+                <div class="research-section">
+                    <h2 class="research-header">See the Research Behind VALID</h2>
+                    <p class="research-intro">
+                        Your assessment results are just the start. Discover the research behind the VALID Framework and how it's helping individuals and organizations make smarter, more validated decisions.
+                    </p>
+                    <button class="research-cta-btn" id="seeResearchBtn">
+                        See the Research Behind VALID <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- How Do You Want to Be Involved Section -->
+                <div class="involvement-section" id="involvementSection">
+                    <h2 class="involvement-header">How Do You Want to Be Involved?</h2>
+                    <p class="involvement-subheading">
+                        Thanks for exploring your VALID Profile. We're building something much bigger—and we'd love for you to be a part of it.
+                    </p>
+                    
+                    <div class="involvement-cards">
+                        <div class="involvement-card" data-type="consultant">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <h3 class="card-title">I'm Interested in Using This as a Consultant</h3>
+                            </div>
+                            <p class="card-description">
+                                Help clients build decision-mature teams using the VALID Framework.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Apply for Consultant Access
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="pilot">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <h3 class="card-title">I Want to Join the Pilot Program</h3>
+                            </div>
+                            <p class="card-description">
+                                Be part of an early group shaping how VALID is used in real-world settings.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Request Pilot Access
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="research">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-microscope"></i>
+                                </div>
+                                <h3 class="card-title">I'm Interested in the Research</h3>
+                            </div>
+                            <p class="card-description">
+                                Help us test, validate, and improve the framework as part of our research cohort.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Join the Research Cohort
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="updates">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <h3 class="card-title">Keep Me in the Loop</h3>
+                            </div>
+                            <p class="card-description">
+                                Just curious for now? We'll send occasional updates and behind-the-scenes insights.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Subscribe for Updates
+                            </button>
+                        </div>
+
+                        <div class="involvement-card" data-type="founder">
+                            <div class="card-header">
+                                <div class="card-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <h3 class="card-title">I'd Like to Talk to the Founder</h3>
+                            </div>
+                            <p class="card-description">
+                                Got something specific in mind? Let's connect directly.
+                            </p>
+                            <button class="card-cta">
+                                <i class="fas fa-arrow-right"></i> Book a Call with Christopher
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="involvement-note">
+                        Your interest helps shape the future of how we understand and improve human decision-making.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Navigation -->
+    <nav class="navigation">
+        <button class="nav-btn" id="backBtn" style="display: none;">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="nav-progress">
+            <span id="currentStep">1</span> of <span id="totalSteps">25</span>
+        </div>
+        <button class="nav-btn" id="nextBtn" style="display: none;">
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Processing your results...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/mobile-supabase.js"></script>
+    <script src="js/mobile-assessment.js"></script>
+</body>
+</html> 

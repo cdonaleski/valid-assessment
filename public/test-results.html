@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Results Debug Test</h1>
+    <div id="debug-output"></div>
+    
+    <script type="module">
+        async function testResults() {
+            const debug = document.getElementById('debug-output');
+            
+            function log(message, type = 'info') {
+                const div = document.createElement('div');
+                div.className = `debug ${type}`;
+                div.textContent = message;
+                debug.appendChild(div);
+                console.log(message);
+            }
+            
+            try {
+                log('Starting results test...');
+                
+                // Test importing the results module
+                log('Testing import of results.js...');
+                const resultsModule = await import('/js/results.js');
+                log('Successfully imported results.js', 'success');
+                
+                // Test importing scoring module
+                log('Testing import of scoring.js...');
+                const scoringModule = await import('/js/scoring.js');
+                log('Successfully imported scoring.js', 'success');
+                
+                // Test importing questions data
+                log('Testing import of questions-data.js...');
+                const questionsData = await import('/js/questions-data.js');
+                log('Successfully imported questions-data.js', 'success');
+                
+                // Test getResultsData function
+                log('Testing getResultsData function...');
+                if (typeof resultsModule.getResultsData === 'function') {
+                    const resultsData = await resultsModule.getResultsData();
+                    log(`getResultsData returned: ${JSON.stringify(resultsData, null, 2)}`, 'success');
+                } else {
+                    log('getResultsData function not found!', 'error');
+                }
+                
+                // Test dimension mapping
+                log('Testing dimension mapping...');
+                const testQuestion = {
+                    id: 'TEST-01',
+                    dimension: 'verity',
+                    reverse: false
+                };
+                
+                if (typeof scoringModule.mapDimension === 'function') {
+                    const mapped = scoringModule.mapDimension(testQuestion.dimension);
+                    log(`Mapped '${testQuestion.dimension}' to '${mapped}'`, 'success');
+                } else {
+                    log('mapDimension function not found!', 'error');
+                }
+                
+                // Test awareness calculation
+                log('Testing awareness calculation...');
+                const testAnswers = {
+                    'AW-01': 6, 'AW-02': 5, 'AW-03': 6, 'AW-04': 3, 
+                    'AW-05': 5, 'AW-06': 6, 'AW-07': 4
+                };
+                
+                if (typeof scoringModule.calculateAwarenessScore === 'function') {
+                    const awarenessScore = scoringModule.calculateAwarenessScore(testAnswers);
+                    log(`Awareness score: ${JSON.stringify(awarenessScore)}`, 'success');
+                } else {
+                    log('calculateAwarenessScore function not found!', 'error');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+        
+        // Run the test when page loads
+        testResults();
+    </script>
+</body>
+</html> 

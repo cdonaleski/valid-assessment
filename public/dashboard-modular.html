@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALID Assessment Dashboard</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/results.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="css/team-management.css">
+    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/responsive-utilities.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Loading State -->
+    <div id="loadingState" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div style="text-align: center;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #3B82F6; margin-bottom: 1rem;"></i>
+            <p>Loading Dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="img/TVM_ Logo_L.png" alt="VALID Assessment" class="logo">
+                <h2>VALID Dashboard</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="sidebar-item" data-section="overviewSection">
+                        <i class="fas fa-home"></i>
+                        <span>Overview</span>
+                    </li>
+                    <li class="sidebar-item" data-section="myDecisionsSection">
+                        <i class="fas fa-chart-line"></i>
+                        <span>My Decisions</span>
+                    </li>
+                    <li class="sidebar-item" data-section="dashboardResultsSection">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>My Results</span>
+                    </li>
+                    <li class="sidebar-item" data-section="profileSection">
+                        <i class="fas fa-user"></i>
+                        <span>Profile</span>
+                    </li>
+                    <li class="sidebar-item" data-section="teamSection">
+                        <i class="fas fa-users"></i>
+                        <span>Team Management</span>
+                    </li>
+                    <li class="sidebar-item" data-section="valid360Section">
+                        <i class="fas fa-360-degrees"></i>
+                        <span>Valid360</span>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="btn secondary" onclick="signOut()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <div id="overviewSection" class="dashboard-section">
+                <h1>Dashboard Overview</h1>
+                <p>Welcome to your VALID Assessment Dashboard</p>
+                <!-- Overview content will be loaded here -->
+            </div>
+
+            <!-- My Decisions Section -->
+            <div id="myDecisionsSection" class="dashboard-section">
+                <h1>My Decisions</h1>
+                <p>Track your decision-making patterns and insights</p>
+                <!-- My Decisions content will be loaded here -->
+            </div>
+
+            <!-- My Results Section -->
+            <div id="dashboardResultsSection" class="dashboard-section" style="display: none;">
+                <!-- Results content will be dynamically loaded -->
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profileSection" class="dashboard-section" style="display: none;">
+                <!-- Profile content will be dynamically loaded -->
+            </div>
+
+            <!-- Team Management Section -->
+            <div id="teamSection" class="dashboard-section" style="display: none;">
+                <!-- Team management content will be dynamically loaded -->
+            </div>
+
+            <!-- Valid360 Section -->
+            <div id="valid360Section" class="dashboard-section" style="display: none;">
+                <!-- Valid360 content will be dynamically loaded -->
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="js/dashboard-init.js"></script>
+    
+    <!-- Legacy Support Scripts -->
+    <script src="js/assessment-state-manager.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/logger.js"></script>
+    <script src="js/utils.js"></script>
+    
+    <!-- Global Functions -->
+    <script>
+        // Sign out function
+        window.signOut = async function() {
+            try {
+                if (window.supabase && window.supabase.auth && window.supabase.auth.signOut) {
+                    await window.supabase.auth.signOut();
+                } else if (window.sessionManager && window.sessionManager.endSession) {
+                    await window.sessionManager.endSession('User logout');
+                } else {
+                    sessionStorage.clear();
+                    localStorage.clear();
+                }
+                
+                window.location.href = '/login.html';
+            } catch (error) {
+                console.error('❌ Error during sign out:', error);
+                alert('Error signing out: ' + (error.message || error));
+            }
+        };
+
+        // Show dashboard when ready
+        window.addEventListener('dashboardReady', function() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.querySelector('.dashboard-container').style.display = 'flex';
+        });
+    </script>
+</body>
+</html> 

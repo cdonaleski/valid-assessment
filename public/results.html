@@ -1,0 +1,323 @@
+<!--
+    VALID Assessment Tool - Results Page
+    Purpose: Displays assessment results and insights for users who have completed the VALID assessment.
+    This page presents personalized feedback, decision-making style analysis, and growth recommendations.
+    Target Users: Assessment participants reviewing their results and development opportunities.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Security: Updated CSP to allow local resources -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://*.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net http://localhost:35730 http://localhost:3002; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com http://localhost:3002; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.emailjs.com ws://localhost:35730 http://localhost:3002">
+    <title>VALID Assessment Results</title>
+    
+    <!-- Load CSS -->
+    <link rel="stylesheet" href="/css/results.css">
+    <link rel="stylesheet" href="/css/debug.css">
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <script>
+        // Initialize Chart.js and register plugins
+        window.addEventListener('load', function() {
+            if (window.Chart && window.ChartDataLabels) {
+                Chart.register(ChartDataLabels);
+                console.log('Chart.js and plugins initialized');
+            }
+        });
+    </script>
+</head>
+<body>
+    <!-- App Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-section">
+                <img src="/img/TVM_%20Logo_L.png" alt="The Validated Mind Logo" class="logo">
+            </div>
+            <div class="actions-section">
+                <div class="dropdown">
+                    <button class="btn primary dropdown-toggle" id="downloadButton">
+                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                            <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                        Download
+                        <svg class="caret" viewBox="0 0 24 24" width="12" height="12">
+                            <path fill="currentColor" d="M7 10l5 5 5-5z"></path>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="downloadMenu">
+                        <button class="dropdown-item" id="printButton">
+                            <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"></path>
+                            </svg>
+                            Print Report
+                        </button>
+                        <button class="dropdown-item" id="exportJSONButton">
+                            <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
+                            </svg>
+                            Export JSON
+                        </button>
+                        <button class="dropdown-item" id="emailButton">
+                            <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"></path>
+                            </svg>
+                            Send via Email
+                        </button>
+                    </div>
+                </div>
+                <button id="startNewAssessment" class="btn secondary">Start New</button>
+                <button id="testScoring" class="btn secondary" style="background: #ff9800;">Test Scoring</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dev Mode Toggle Switch -->
+    <div class="dev-mode-toggle-switch">
+        <label class="switch">
+            <input type="checkbox" id="devModeToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="dev-mode-label">Dev Mode</span>
+    </div>
+
+    <div class="container">
+        <!-- Main Content -->
+        <main>
+            <h1>Your VALID Assessment Results</h1>
+            <p class="description">This analysis provides insights into your decision-making style and preferences across the five VALID dimensions.</p>
+
+            <!-- Data Source Indicator -->
+            <div id="dataSourceIndicator"></div>
+
+            <!-- Scenario Selector -->
+            <div class="scenario-selector">
+                <div class="scenario-header">
+                    <h3>View Results in Different Contexts</h3>
+                    <p>Select a scenario to see how your decision-making style applies in specific situations:</p>
+                </div>
+                <div class="scenario-controls">
+                    <select id="scenarioSelect" class="scenario-dropdown">
+                        <option value="general">🎯 General Decision Making</option>
+                        <option value="work">💼 Work & Professional</option>
+                        <option value="leadership">👥 Leadership & Management</option>
+                        <option value="personal">🏠 Personal & Life</option>
+                        <option value="crisis">⚡ Crisis & High Pressure</option>
+                        <option value="innovation">🚀 Innovation & Change</option>
+                        <option value="collaboration">🤝 Collaboration & Teamwork</option>
+                        <option value="strategic">📊 Strategic Planning</option>
+                    </select>
+                    <div class="scenario-info">
+                        <span id="scenarioDescription">Your overall decision-making style across all contexts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div class="profile-section">
+                <div class="chart-section">
+                    <h2>Decision-Making Profile</h2>
+                    <div class="chart-container">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                    <div class="awareness-section">
+                        <h3>Metacognitive Awareness</h3>
+                        <div class="awareness-score" id="awarenessScoreContainer">
+                            <div class="score-label">
+                                <span>Self-Reflection & Decision Awareness</span>
+                                <span class="score-value" id="awarenessScore">--%</span>
+                            </div>
+                            <div class="score-bar awareness" id="awarenessScoreBar" style="width: 0%"></div>
+                            <p id="awarenessDescription" class="awareness-description">
+                                Your ability to reflect on and understand your own decision-making processes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scores-section">
+                    <div class="primary-style">
+                        <h3>Primary Style: <span id="primaryStyle">Verity (V)</span> <span id="primaryScore">90%</span></h3>
+                        <p id="primaryDescription">You excel in data-driven decision making and analytical problem-solving. This systematic approach enables you to make well-researched and objective decisions.</p>
+                        <p id="primaryCaution" class="caution-text"></p>
+                    </div>
+
+                    <div class="secondary-style">
+                        <h3>Secondary Style: <span id="secondaryStyle">Institutional (I)</span> <span id="secondaryScore">90%</span></h3>
+                        <p id="secondaryDescription">Your strong grasp of organizational knowledge and systems complements your analytical approach, allowing you to make decisions grounded in established practices.</p>
+                        <p id="secondaryCaution" class="caution-text"></p>
+                    </div>
+
+                    <div class="dimension-scores">
+                        <h3>Dimension Scores</h3>
+                        <div class="score-bars">
+                            <div class="score-item" id="scoreVContainer">
+                                <div class="score-label">
+                                    <span>Verity (Data-Driven)</span>
+                                    <span class="score-value">90%</span>
+                                </div>
+                                <div class="score-bar verity" id="scoreV" style="width: 90%"></div>
+                            </div>
+
+                            <div class="score-item" id="scoreAContainer">
+                                <div class="score-label">
+                                    <span>Association (Relationship)</span>
+                                    <span class="score-value">50%</span>
+                                </div>
+                                <div class="score-bar association" id="scoreA" style="width: 50%"></div>
+                            </div>
+
+                            <div class="score-item" id="scoreLContainer">
+                                <div class="score-label">
+                                    <span>Lived Experience</span>
+                                    <span class="score-value">60%</span>
+                                </div>
+                                <div class="score-bar lived" id="scoreL" style="width: 60%"></div>
+                            </div>
+
+                            <div class="score-item" id="scoreIContainer">
+                                <div class="score-label">
+                                    <span>Institutional Knowledge</span>
+                                    <span class="score-value">90%</span>
+                                </div>
+                                <div class="score-bar institutional" id="scoreI" style="width: 90%"></div>
+                            </div>
+
+                            <div class="score-item" id="scoreDContainer">
+                                <div class="score-label">
+                                    <span>Desire (Future-Focused)</span>
+                                    <span class="score-value">60%</span>
+                                </div>
+                                <div class="score-bar desire" id="scoreD" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dimension Boxes Section styled like Validation Insights -->
+            <section class="profile-summary-section">
+                <h2>General Decision Making Profile</h2>
+            <div class="dimension-boxes">
+                <div class="dimension-box verity">
+                    <h4>Verity</h4>
+                    <div class="score">90%</div>
+                    <p>Strong data-driven decision making</p>
+                </div>
+                <div class="dimension-box association">
+                    <h4>Association</h4>
+                    <div class="score">50%</div>
+                    <p>Relationship building approaches</p>
+                </div>
+                <div class="dimension-box lived">
+                    <h4>Lived Experience</h4>
+                    <div class="score">60%</div>
+                    <p>Personal experience integration</p>
+                </div>
+                <div class="dimension-box institutional">
+                    <h4>Institutional</h4>
+                    <div class="score">90%</div>
+                    <p>Organizational knowledge</p>
+                </div>
+                <div class="dimension-box desire">
+                    <h4>Desire</h4>
+                    <div class="score">60%</div>
+                    <p>Future-focused planning</p>
+                </div>
+            </div>
+            </section>
+
+            <!-- Development Section -->
+            <div class="development-section">
+                <h2>Validation Insights</h2>
+                <div class="recommendations">
+                    <div class="recommendation association">
+                        <h3>Enhance Relationship Building</h3>
+                        <p>Consider incorporating more collaborative approaches and seeking diverse perspectives in your decision-making process.</p>
+                    </div>
+                    <div class="recommendation lived">
+                        <h3>Leverage Personal Experience</h3>
+                        <p>Look for opportunities to apply your practical experiences more actively in problem-solving situations.</p>
+                    </div>
+                    <div class="recommendation desire">
+                        <h3>Balance Future Vision</h3>
+                        <p>While maintaining your analytical strength, try to integrate more future-focused thinking in your planning process.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+                <button id="generateTestData" class="btn secondary" onclick="resetToTestData()">Reset to Test Data</button>
+                <button id="clearInvalidData" class="btn secondary" onclick="clearInvalidData(); window.location.reload();">Clear Invalid Data</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script type="module" src="/js/results.js"></script>
+    <script type="module">
+        import { calculateScores } from '/js/scoring.js';
+        import { generatePDF } from '/js/reports.js';
+        // import { logger } from '/js/logger.js';
+        import { scenarios, getScenarioInsights, calculateContextScores } from '/js/scenarios.js';
+        import { updateResultsUI, initializeRadarChart } from '/js/results-ui.js';
+        
+        // Make scenarios available globally
+        window.scenarios = scenarios;
+        window.getScenarioInsights = getScenarioInsights;
+        window.calculateContextScores = calculateContextScores;
+        window.updateResultsUI = updateResultsUI;
+        window.initializeRadarChart = initializeRadarChart;
+        
+        // Test console log to see if JavaScript is working
+        console.log('Results page JavaScript loaded successfully');
+        
+        // Initialize results page
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded');
+            // Wait a moment for results.js to load
+            setTimeout(() => {
+                console.log('Checking for initializeResults function...');
+                if (typeof window.initializeResults === 'function') {
+                    console.log('Calling initializeResults...');
+                    try {
+                        window.initializeResults();
+                    } catch (error) {
+                        console.error('Error in initializeResults:', error);
+                    }
+                } else {
+                    console.error('initializeResults function not found on window object');
+                    console.log('Available window functions:', Object.keys(window).filter(key => typeof window[key] === 'function'));
+                }
+            }, 100);
+        });
+
+        // Dev Mode Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const devToggle = document.getElementById('devModeToggle');
+            const debugPanel = document.getElementById('debugPanel');
+            const testDataBtn = document.getElementById('generateTestData');
+            if (devToggle && debugPanel) {
+                devToggle.addEventListener('change', function() {
+                    debugPanel.classList.toggle('show', devToggle.checked);
+                    if (testDataBtn) {
+                        testDataBtn.style.display = devToggle.checked ? 'inline-block' : 'none';
+                    }
+                });
+                // Hide test data button by default
+                if (testDataBtn) {
+                    testDataBtn.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
