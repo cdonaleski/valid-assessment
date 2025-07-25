@@ -20,6 +20,9 @@ module.exports = (req, res) => {
   }
 
   const { url, method } = req;
+  
+  // Debug logging for requests
+  console.log(`[${method}] ${url}`);
 
   // API config endpoint
   if (url === '/api/config') {
@@ -48,6 +51,7 @@ module.exports = (req, res) => {
     } else if (url.match(/\.(png|jpg|jpeg|gif|svg|ico)$/i)) {
       // Handle image files
       filePath = path.join(__dirname, '..', url);
+      console.log(`📷 Image request: ${url} -> ${filePath}`);
     } else {
       // Default to index.html for SPA routing
       filePath = path.join(__dirname, '../index.html');
@@ -90,6 +94,7 @@ module.exports = (req, res) => {
         }
       } else {
         // File not found, serve index.html
+        console.log(`❌ File not found: ${filePath}`);
         const indexPath = path.join(__dirname, '../index.html');
         const indexContent = fs.readFileSync(indexPath, 'utf8');
         res.setHeader('Content-Type', 'text/html');
