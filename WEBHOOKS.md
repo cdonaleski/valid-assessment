@@ -115,26 +115,36 @@ All webhooks send a standardized payload:
 
 ## 🔧 Integration Examples
 
-### Email Marketing (SendGrid)
+### Email Marketing (MailerSend)
 
 ```javascript
 // In api/routes.js - consultant handler
-const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
 
 const consultantHandler = async (data) => {
-  const msg = {
-    to: data.contact_data.email,
-    from: 'hello@validassessment.com',
-    templateId: 'd-consultant-welcome',
-    dynamicTemplateData: {
-      name: data.contact_data.name,
-      organization: data.contact_data.organization,
-      scores: data.scores
-    }
-  };
+  const sentFrom = new Sender('hello@validassessment.com', 'VALID Assessment Team');
+  const recipients = [new Recipient(data.contact_data.email, data.contact_data.name)];
+
+  const emailParams = new EmailParams()
+    .setFrom(sentFrom)
+    .setTo(recipients)
+    .setTemplateId('consultant-welcome-template-id')
+    .setVariables([
+      {
+        email: data.contact_data.email,
+        substitutions: {
+          name: data.contact_data.name,
+          organization: data.contact_data.organization,
+          scores: data.scores
+        }
+      }
+    ]);
   
-  await sgMail.send(msg);
+  await mailerSend.email.send(emailParams);
   
   // Add to consultant pipeline
   await addToConsultantPipeline(data.contact_data);
@@ -239,9 +249,10 @@ SUPABASE_SERVICE_KEY=your-service-key
 PORT=3000
 NODE_ENV=production
 
-# Email Service (SendGrid)
-SENDGRID_API_KEY=your-sendgrid-key
+# Email Service (MailerSend)
+MAILERSEND_API_KEY=your-mailersend-key
 FROM_EMAIL=hello@validassessment.com
+FROM_NAME=VALID Assessment Team
 
 # CRM Integration (HubSpot)
 HUBSPOT_ACCESS_TOKEN=your-hubspot-token

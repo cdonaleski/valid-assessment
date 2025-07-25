@@ -1,22 +1,16 @@
 {
   "version": 2,
   "name": "mobile-valid-assessment",
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/server.js"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/server.js"
+      "destination": "/api/index"
     }
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "server.js": {
-      "maxDuration": 10
-    }
   }
 } 

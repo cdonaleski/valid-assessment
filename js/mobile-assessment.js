@@ -13,9 +13,13 @@ class MobileAssessment {
         this.decisionMaker = null;
         this.consultantReferral = null;
         this.contactInfo = {};
+        this.config = null;
         
         // Initialize Supabase client when available
         this.initSupabase();
+        
+        // Initialize configuration manager
+        this.initConfiguration();
         
         // Streamlined questions: 5 per dimension, 1 reverse each
         this.questions = [
@@ -458,6 +462,71 @@ class MobileAssessment {
         }
     }
 
+    async initConfiguration() {
+        try {
+            // Initialize configuration manager with Supabase client
+            if (typeof ConfigManager !== 'undefined') {
+                this.configManager = new ConfigManager(this.supabase);
+                await this.configManager.init();
+                
+                // Load dynamic configuration from API
+                await this.loadDynamicConfiguration();
+            } else {
+                console.log('📊 ConfigManager not available, using defaults');
+            }
+        } catch (error) {
+            console.error('Failed to initialize configuration:', error);
+        }
+    }
+
+    async loadDynamicConfiguration() {
+        try {
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.config = data.config;
+                    console.log('📊 Loaded dynamic configuration from API');
+                    
+                    // Apply UI configuration
+                    this.applyUIConfiguration();
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load dynamic configuration:', error);
+        }
+    }
+
+    applyUIConfiguration() {
+        if (!this.config) return;
+
+        try {
+            // Apply brand colors
+            if (this.config.brand_primary_color) {
+                document.documentElement.style.setProperty('--primary-color', this.config.brand_primary_color);
+            }
+            if (this.config.brand_secondary_color) {
+                document.documentElement.style.setProperty('--secondary-color', this.config.brand_secondary_color);
+            }
+
+            // Update welcome message
+            if (this.config.welcome_message) {
+                const titleElement = document.querySelector('.age-title');
+                if (titleElement && titleElement.textContent === 'Ready to Begin?') {
+                    titleElement.textContent = this.config.welcome_message;
+                }
+            }
+
+            // Update assessment title
+            if (this.config.assessment_title) {
+                document.title = this.config.assessment_title + ' - Mobile';
+            }
+
+        } catch (error) {
+            console.warn('Failed to apply UI configuration:', error);
+        }
+    }
+
     init() {
         this.setupEventListeners();
         this.updateProgress();
@@ -537,6 +606,14 @@ class MobileAssessment {
         if (continueBtn) {
             continueBtn.addEventListener('click', () => {
                 this.scrollToInvolvement();
+            });
+        }
+
+        // Take Again button
+        const takeAgainBtn = document.getElementById('takeAgainBtn');
+        if (takeAgainBtn) {
+            takeAgainBtn.addEventListener('click', () => {
+                this.takeAgain();
             });
         }
 
@@ -876,6 +953,9 @@ class MobileAssessment {
         setTimeout(() => {
             this.calculateResults();
             this.showResults();
+            
+            // Send results via email after showing them
+            this.sendResultsEmail();
         }, 1500);
     }
 
@@ -1423,6 +1503,172 @@ class MobileAssessment {
         } else if (this.currentScreen === 'results') {
             backBtn.style.display = 'none';
             nextBtn.style.display = 'none';
+        }
+    }
+
+    takeAgain() {
+        // Reset all assessment state
+        this.currentScreen = 'age';
+        this.currentQuestion = 0;
+        this.answers = {};
+        this.userAge = null;
+        this.jobTitle = null;
+        this.decisionMaker = null;
+        this.consultantReferral = null;
+        this.contactInfo = {};
+        this.results = null;
+        
+        // Reset Supabase client state to create new assessment
+        if (this.supabase) {
+            this.supabase.currentAssessmentId = null;
+        }
+        
+        // Clear any UI selections
+        this.clearAllSelections();
+        
+        // Reset the assessment flow
+        this.updateScreens();
+        this.updateProgress();
+        this.updateNavigation();
+        
+        // Clear the contact form
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.reset();
+        }
+        
+        // Reset submit button if it was disabled
+        const submitBtn = contactForm?.querySelector('.submit-btn');
+        if (submitBtn) {
+            submitBtn.textContent = 'View My Results';
+            submitBtn.disabled = false;
+        }
+        
+        console.log('Assessment reset - starting over');
+    }
+
+    clearAllSelections() {
+        // Clear age selections
+        document.querySelectorAll('#ageScreen .age-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Clear job role selections
+        document.querySelectorAll('#jobTitleScreen [data-role]').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Clear decision maker selections
+        document.querySelectorAll('#decisionMakerScreen [data-decision]').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Clear consultant selections
+        document.querySelectorAll('#consultantScreen [data-consultant]').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Clear answer selections
+        document.querySelectorAll('.answer-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Clear radio button selections
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.checked = false;
+        });
+    }
+
+    async sendResultsEmail() {
+        try {
+            // Show email sending notification
+            this.showEmailNotification('sending');
+            
+            const response = await fetch('/api/email-results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contactInfo: this.contactInfo,
+                    scores: this.results.scores,
+                    persona: this.results.persona,
+                    overallScore: this.results.overallScore
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('Results email sent successfully');
+                this.showEmailNotification('success');
+            } else {
+                console.error('Failed to send results email:', result.error);
+                // Show different message if email service isn't configured
+                if (result.configured === false) {
+                    this.showEmailNotification('not_configured');
+                } else {
+                    this.showEmailNotification('error');
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error sending results email:', error);
+            this.showEmailNotification('error');
+        }
+    }
+
+    showEmailNotification(status) {
+        // Create or update email notification
+        let notification = document.getElementById('emailNotification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'emailNotification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 1000;
+                max-width: 300px;
+                transition: all 0.3s ease;
+            `;
+            document.body.appendChild(notification);
+        }
+
+        if (status === 'sending') {
+            notification.style.background = '#3B82F6';
+            notification.innerHTML = '📧 Attempting to email your results...';
+        } else if (status === 'success') {
+            notification.style.background = '#10B981';
+            notification.innerHTML = '✅ Results emailed to ' + this.contactInfo.email;
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        } else if (status === 'not_configured') {
+            notification.style.background = '#F59E0B';
+            notification.innerHTML = `📋 Results displayed above! Email sending requires setup. <a href="mailto:${this.contactInfo.email}?subject=Your VALID Assessment Results&body=Hi! Please refer to your assessment results on the screen. For email delivery setup, check the EMAIL_SETUP_GUIDE.md file." style="color: white; text-decoration: underline;">Email yourself manually</a>`;
+            
+            // Hide after 12 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 12000);
+        } else if (status === 'error') {
+            notification.style.background = '#EF4444';
+            notification.innerHTML = '❌ Failed to send email. Results shown above.';
+            
+            // Hide after 7 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 7000);
         }
     }
 }

@@ -11,6 +11,26 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Fix passive wheel event listeners BEFORE any other scripts -->
+    <script>
+        // Ensure all wheel events are passive for better performance
+        (function() {
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function(type, listener, options) {
+                if (type === 'wheel' || type === 'mousewheel' || type === 'DOMMouseScroll') {
+                    if (typeof options === 'boolean') {
+                        options = { capture: options, passive: true };
+                    } else if (typeof options === 'object' && options !== null) {
+                        options.passive = true;
+                    } else {
+                        options = { passive: true };
+                    }
+                }
+                return originalAddEventListener.call(this, type, listener, options);
+            };
+        })();
+    </script>
+
     <!-- Supabase JavaScript Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
     
@@ -89,6 +109,13 @@
             display: flex;
             align-items: center;
             flex-shrink: 1;
+        }
+
+        .header-logo-img {
+            height: 45px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
         }
 
         .header-logo-text {
@@ -530,6 +557,11 @@
                 padding: 0.75rem;
             }
 
+            .header-logo-img {
+                height: 35px;
+                max-width: 150px;
+            }
+
             .logo-main {
                 font-size: 12px;
             }
@@ -879,10 +911,7 @@
     <header class="header">
         <div class="header-content">
             <div class="logo-container">
-                <div class="header-logo-text">
-                    <span class="logo-main">THE VALIDATED MIND</span>
-                    <span class="logo-sub">RESEARCH LAB</span>
-                </div>
+                <img src="logo.png" alt="The Validated Mind Research Lab" class="header-logo-img">
             </div>
             <div class="progress-info">
                 <div class="progress-bar">
@@ -1267,30 +1296,8 @@
     </div>
 
     <!-- JavaScript -->
-    <script>
-        // Ensure all wheel events are passive for better performance
-        (function() {
-            const addPassiveWheelListener = function() {
-                const originalAddEventListener = EventTarget.prototype.addEventListener;
-                EventTarget.prototype.addEventListener = function(type, listener, options) {
-                    if (type === 'wheel' || type === 'mousewheel' || type === 'DOMMouseScroll') {
-                        if (typeof options === 'boolean') {
-                            options = { capture: options, passive: true };
-                        } else if (typeof options === 'object' && options !== null) {
-                            options.passive = true;
-                        } else {
-                            options = { passive: true };
-                        }
-                    }
-                    return originalAddEventListener.call(this, type, listener, options);
-                };
-            };
-            
-            // Apply the passive wheel listener enhancement
-            addPassiveWheelListener();
-        })();
-    </script>
     
+    <script src="js/config-manager.js"></script>
     <script src="js/mobile-supabase.js"></script>
     <script src="js/mobile-assessment.js"></script>
 </body>
