@@ -31,6 +31,19 @@
         })();
     </script>
 
+    <!-- Logo fallback script -->
+    <script>
+        function showTextLogo() {
+            const imgLogo = document.getElementById('headerLogo');
+            const textLogo = document.getElementById('textLogo');
+            if (imgLogo && textLogo) {
+                imgLogo.style.display = 'none';
+                textLogo.style.display = 'flex';
+                console.log('📷 Logo image failed to load, showing text fallback');
+            }
+        }
+    </script>
+
     <!-- Supabase JavaScript Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
     
@@ -911,7 +924,11 @@
     <header class="header">
         <div class="header-content">
             <div class="logo-container">
-                <img src="logo.png" alt="The Validated Mind Research Lab" class="header-logo-img">
+                <img src="logo.png" alt="The Validated Mind Research Lab" class="header-logo-img" id="headerLogo" onerror="showTextLogo()">
+                <div class="header-logo-text" id="textLogo" style="display: none;">
+                    <div class="logo-main">VALID Assessment</div>
+                    <div class="logo-sub">The Validated Mind</div>
+                </div>
             </div>
             <div class="progress-info">
                 <div class="progress-bar">

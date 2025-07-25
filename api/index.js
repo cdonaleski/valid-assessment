@@ -45,6 +45,9 @@ module.exports = (req, res) => {
       filePath = path.join(__dirname, '..', url);
     } else if (url.startsWith('/css/')) {
       filePath = path.join(__dirname, '..', url);
+    } else if (url.match(/\.(png|jpg|jpeg|gif|svg|ico)$/i)) {
+      // Handle image files
+      filePath = path.join(__dirname, '..', url);
     } else {
       // Default to index.html for SPA routing
       filePath = path.join(__dirname, '../index.html');
@@ -52,18 +55,39 @@ module.exports = (req, res) => {
 
     try {
       if (fs.existsSync(filePath)) {
-        const content = fs.readFileSync(filePath, 'utf8');
-        
-        // Set appropriate content type
-        if (filePath.endsWith('.html')) {
-          res.setHeader('Content-Type', 'text/html');
-        } else if (filePath.endsWith('.js')) {
-          res.setHeader('Content-Type', 'application/javascript');
-        } else if (filePath.endsWith('.css')) {
-          res.setHeader('Content-Type', 'text/css');
+        // Handle binary files (images) separately
+        if (filePath.match(/\.(png|jpg|jpeg|gif|svg|ico)$/i)) {
+          const content = fs.readFileSync(filePath);
+          
+          // Set appropriate content type for images
+          if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+          } else if (filePath.match(/\.(jpg|jpeg)$/i)) {
+            res.setHeader('Content-Type', 'image/jpeg');
+          } else if (filePath.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+          } else if (filePath.endsWith('.svg')) {
+            res.setHeader('Content-Type', 'image/svg+xml');
+          } else if (filePath.endsWith('.ico')) {
+            res.setHeader('Content-Type', 'image/x-icon');
+          }
+          
+          res.status(200).send(content);
+        } else {
+          // Handle text files
+          const content = fs.readFileSync(filePath, 'utf8');
+          
+          // Set appropriate content type
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+          } else if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+          }
+          
+          res.status(200).send(content);
         }
-        
-        res.status(200).send(content);
       } else {
         // File not found, serve index.html
         const indexPath = path.join(__dirname, '../index.html');
